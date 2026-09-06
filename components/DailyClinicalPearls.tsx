@@ -112,10 +112,16 @@ export const DailyClinicalPearls = () => {
       setOffset(nextOffset);
       setRegensRemaining(nextRemaining);
 
-      const newPearls = await dbService.getDailyClinicalPearls(nextOffset, 5);
-      setPearls(newPearls);
+      const freshPearls = await dbService.generateFreshClinicalPearls(undefined, 5);
+      if (freshPearls && freshPearls.length > 0) {
+        setPearls(freshPearls);
+      } else {
+        const fallback = await dbService.getDailyClinicalPearls(nextOffset, 5);
+        setPearls(fallback);
+      }
     } catch {
-      // Fallback
+      const fallback = await dbService.getDailyClinicalPearls(nextOffset, 5);
+      setPearls(fallback);
     } finally {
       setLoading(false);
     }
@@ -451,7 +457,7 @@ export const DailyClinicalPearls = () => {
                     {
                       borderLeftColor: Colors.main,
                       borderLeftWidth: 3.5,
-                      backgroundColor: 'rgba(222, 255, 249, 0.06)',
+                      backgroundColor: 'rgba(169, 228, 232, 0.06)',
                     },
                   ]}
                 >
@@ -476,7 +482,7 @@ export const DailyClinicalPearls = () => {
                       {
                         borderLeftColor: Colors.pink,
                         borderLeftWidth: 3.5,
-                        backgroundColor: 'rgba(255, 195, 221, 0.08)',
+                        backgroundColor: 'rgba(249, 186, 201, 0.08)',
                       },
                     ]}
                   >

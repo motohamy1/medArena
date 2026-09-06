@@ -7,12 +7,10 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Keyboard,
   Animated as RNAnimated,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -42,6 +40,7 @@ import { Colors } from "../../constants/Colors";
 import FormattedClinicalText from "../../components/FormattedClinicalText";
 import { getDailyPromptBatches, QuickPrompt } from "../../constants/ClinicalPresetsData";
 import { KnowledgeMap } from "../../components/KnowledgeMap";
+import { useKeyboardLift } from "../../hooks/useKeyboardLift";
 
 // Motion discipline (PRODUCT.md): state-changing feedback only, 150-250ms.
 const EASE_HEAVY = Easing.bezier(0.32, 0.72, 0, 1);
@@ -56,7 +55,7 @@ const SECTION_CONFIG: Record<
 > = {
   "EMERGENCY PROTOCOL & IMMEDIATE ACTION": {
     color: Colors.pink,
-    border: "rgba(255, 195, 221, 0.45)",
+    border: "rgba(249, 186, 201, 0.45)",
     icon: "alert-circle-outline",
     label: "Emergency Protocol & Action",
   },
@@ -74,13 +73,13 @@ const SECTION_CONFIG: Record<
   },
   "CLINICAL ASSESSMENT": {
     color: Colors.main,
-    border: "rgba(222, 255, 249, 0.45)",
+    border: "rgba(169, 228, 232, 0.45)",
     icon: "clipboard-outline",
     label: "Clinical Assessment",
   },
   "DIFFERENTIAL DIAGNOSIS": {
     color: Colors.lavender,
-    border: "rgba(219, 212, 253, 0.45)",
+    border: "rgba(203, 200, 245, 0.45)",
     icon: "git-branch-outline",
     label: "Differential Diagnosis",
   },
@@ -98,25 +97,25 @@ const SECTION_CONFIG: Record<
   },
   "MANAGEMENT PROTOCOL": {
     color: Colors.main,
-    border: "rgba(222, 255, 249, 0.45)",
+    border: "rgba(169, 228, 232, 0.45)",
     icon: "medical-outline",
     label: "Management Protocol",
   },
   "MANAGEMENT & PHARMACOTHERAPY": {
     color: Colors.main,
-    border: "rgba(222, 255, 249, 0.45)",
+    border: "rgba(169, 228, 232, 0.45)",
     icon: "medical-outline",
     label: "Management & Pharmacotherapy",
   },
   "FIRST-LINE PHARMACOTHERAPY": {
     color: Colors.main,
-    border: "rgba(222, 255, 249, 0.45)",
+    border: "rgba(169, 228, 232, 0.45)",
     icon: "medical-outline",
     label: "First-Line Pharmacotherapy",
   },
   "PEDIATRIC SAFETY & CONTRAINDICATIONS": {
     color: Colors.pink,
-    border: "rgba(255, 195, 221, 0.45)",
+    border: "rgba(249, 186, 201, 0.45)",
     icon: "warning-outline",
     label: "Pediatric Safety & Contraindications",
   },
@@ -128,29 +127,29 @@ const SECTION_CONFIG: Record<
   },
   "SURGICAL / PROCEDURAL CONSIDERATIONS": {
     color: Colors.lavender,
-    border: "rgba(219, 212, 253, 0.45)",
+    border: "rgba(203, 200, 245, 0.45)",
     icon: "cut-outline",
     label: "Surgical Considerations",
   },
   "CLINICAL PEARLS & PITFALLS": {
     color: Colors.lavender,
-    border: "rgba(219, 212, 253, 0.45)",
+    border: "rgba(203, 200, 245, 0.45)",
     icon: "sparkles-outline",
     label: "Clinical Pearls & Pitfalls",
   },
   "RED FLAGS / EMERGENCY": {
     color: Colors.pink,
-    border: "rgba(255, 195, 221, 0.45)",
+    border: "rgba(249, 186, 201, 0.45)",
     icon: "warning-outline",
     label: "Red Flags & Warnings",
   },
 };
 
 const FALLBACK_PALETTE = [
-  { color: Colors.lavender, border: "rgba(219, 212, 253, 0.45)" },
+  { color: Colors.lavender, border: "rgba(203, 200, 245, 0.45)" },
   { color: Colors.teal, border: "rgba(109, 194, 189, 0.45)" },
-  { color: Colors.pink, border: "rgba(255, 195, 221, 0.45)" },
-  { color: Colors.main, border: "rgba(222, 255, 249, 0.45)" },
+  { color: Colors.pink, border: "rgba(249, 186, 201, 0.45)" },
+  { color: Colors.main, border: "rgba(169, 228, 232, 0.45)" },
 ];
 
 function parseMedicalSections(text: string): {
@@ -178,7 +177,8 @@ function parseMedicalSections(text: string): {
     }
   }
 
-  const mdHeadingRegex = /(?:^|\n)(?:###?|\*\*)\s*([A-Za-z0-9\s/&,–—\(\):-]+?)(?:\*\*|:)?\s*\n/g;
+  // Explicit markdown headings (### Heading or ## Heading)
+  const mdHeadingRegex = /(?:^|\n)###?\s*([A-Za-z0-9\u0600-\u06FF\s/&,–—\(\):-]+?)\s*\n/g;
   const matches = [...text.matchAll(mdHeadingRegex)];
   if (matches.length >= 2) {
     const sections: { heading: string; content: string }[] = [];
@@ -196,28 +196,7 @@ function parseMedicalSections(text: string): {
     }
   }
 
-  const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter((p) => p.length > 15);
-  if (paragraphs.length >= 2) {
-    const defaultHeadings = [
-      'Clinical Assessment',
-      'Management Protocol',
-      'Investigations & Criteria',
-      'Pharmacotherapy & Dosing',
-      'Red Flags & Pearls',
-    ];
-    const sections = paragraphs.slice(0, 5).map((p, idx) => {
-      const leadBold = p.match(/^\*\*([^*]+)\*\*:?\s*([\s\S]*)/);
-      if (leadBold) {
-        return { heading: leadBold[1].trim(), content: leadBold[2].trim() || p };
-      }
-      return {
-        heading: defaultHeadings[idx] || `Section ${idx + 1}`,
-        content: p,
-      };
-    });
-    return { hasSections: true, sections, plainText: "" };
-  }
-
+  // Cohesive direct responses stay as single unified answer
   return {
     hasSections: false,
     sections: [],
@@ -520,8 +499,41 @@ const ChatBubble: React.FC<{
                 })}
               </View>
             ) : (
-              <View className="bg-[#0c1017] border border-white/10 rounded-3xl rounded-tl-md p-4">
-                <FormattedClinicalText text={message.text} />
+              <View
+                className="rounded-2xl overflow-hidden bg-[#0c1017] border"
+                style={{
+                  borderColor: "rgba(109, 194, 189, 0.35)",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 6,
+                  elevation: 2,
+                }}
+              >
+                <View
+                  className="flex-row items-center justify-between px-4 py-2 border-b"
+                  style={{
+                    backgroundColor: "rgba(109, 194, 189, 0.10)",
+                    borderBottomColor: "rgba(109, 194, 189, 0.20)",
+                  }}
+                >
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="medical" size={13} color={TURQUOISE} />
+                    <Text className="text-[11px] font-sans-bold uppercase tracking-wider text-turquoise">
+                      Clinical Response
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => onCopy(message.text)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    className="opacity-70 active:opacity-100"
+                  >
+                    <Ionicons name="copy-outline" size={13} color="#94a3b8" />
+                  </TouchableOpacity>
+                </View>
+                <View className="p-4">
+                  <FormattedClinicalText text={message.text} />
+                </View>
               </View>
             )}
 
@@ -642,8 +654,12 @@ const ChatTab = () => {
   const DOCK_BAR_HEIGHT = 72;
   const TAB_BAR_GAP = 8;
   
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const keyboardHeightAnim = useRef(new RNAnimated.Value(0)).current;
+  const {
+    keyboardHeight,
+    manualLift,
+    liftAnim: keyboardHeightAnim,
+    containerProps,
+  } = useKeyboardLift();
   const [activeMode, setActiveMode] = useState<'chat' | 'map'>('chat');
   const [contextSpecialty, setContextSpecialty] = useState<SpecialtyData | null>(null);
   const [contextTopic, setContextTopic] = useState<TopicItem | null>(null);
@@ -722,34 +738,6 @@ const ChatTab = () => {
     }
     loadContext();
   }, [params.specialtyId, params.topicId]);
-
-  // Track keyboard height
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      const h = e.endCoordinates.height;
-      setKeyboardHeight(h);
-      RNAnimated.timing(keyboardHeightAnim, {
-        toValue: h,
-        duration: Platform.OS === 'ios' ? 250 : 80,
-        useNativeDriver: false,
-      }).start();
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-      RNAnimated.timing(keyboardHeightAnim, {
-        toValue: 0,
-        duration: Platform.OS === 'ios' ? 200 : 80,
-        useNativeDriver: false,
-      }).start();
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [keyboardHeightAnim]);
 
   // Auto-save session messages
   const persistCurrentMessages = async (updatedMsgs: ChatMessage[]) => {
@@ -937,7 +925,7 @@ const ChatTab = () => {
   }, [params.query, params.autoSend]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-background" edges={['top']} {...containerProps}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       {/* Header with Title, Pen Icon (New Chat), History Modal button, and Map Switcher */}
@@ -1127,7 +1115,7 @@ const ChatTab = () => {
               styles.jumpControlsContainer,
               {
                 bottom: keyboardHeight > 0
-                  ? keyboardHeight + 65
+                  ? manualLift + 65
                   : floatingBottom + DOCK_BAR_HEIGHT + TAB_BAR_GAP + 55,
               },
             ]}
@@ -1176,13 +1164,16 @@ const ChatTab = () => {
               <TextInput
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder="Ask about guidelines, dosages, criteria..."
+                placeholder="Guidelines, dosages, criteria..."
                 placeholderTextColor="#6b7280"
                 className="flex-1 text-white text-[15px] font-sans py-1 leading-5"
                 returnKeyType="send"
                 onSubmitEditing={() => handleSend()}
                 editable={!isTyping}
-                multiline={false}
+                multiline
+                submitBehavior="newline"
+                textAlignVertical="top"
+                style={{ maxHeight: 120 }}
               />
               <TouchableOpacity
                 onPress={() => handleSend()}

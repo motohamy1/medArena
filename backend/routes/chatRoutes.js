@@ -159,52 +159,54 @@ Hello Doctor! How can I assist you with clinical guidelines, treatment protocols
             personaInstruction += `\nSPECIFIC CONTEXT: You are advising within ${categoryContext}.`;
         }
 
+        // Determine grounding source indicator
+        let sourceType = 'general_synthesis';
+        if (customKnowledgeDocs.length > 0) {
+            sourceType = 'pgvector_rag';
+        } else if (literatureRefs.length > 0) {
+            sourceType = 'europe_pmc';
+        }
+
         let systemPrompt = `
 ${personaInstruction}
 
-YOUR MISSION: Synthesize clinical evidence into actionable, high-yield guidance while maintaining unbroken session context and clinical safety.
+YOUR MISSION: Deliver authoritative, peer-level clinical guidance that directly addresses the clinician's or patient's exact question, maintaining clinical pharmacovigilance, demographic continuity, and dynamic formatting.
 
-KNOWLEDGE RESOURCES:
-${medicalKnowledgeContext || 'NONE AVAILABLE (AI: SYNTHESIZE FROM AUTHORITATIVE INTERNATIONAL CLINICAL GUIDELINES & CONSENSUS)'}
+KNOWLEDGE BASE & GUIDELINES:
+${medicalKnowledgeContext || 'NONE RETRIEVED (AI: Rely on authoritative international guidelines such as WHO, AAP, ESPGHAN, NICE, UpToDate, and Maastricht VI. Explicitly prioritize standard guideline consensus over speculation.)'}
 
-### 1. SESSION CONTINUITY & DEMOGRAPHIC PRESERVATION:
-- **Preserve Established Context**: When the user asks a follow-up question (e.g. asking about a drug, dosage, or test like "what about tetracycline?"), you MUST interpret it strictly within the active clinical topic and patient demographic established in previous messages (e.g. pediatric age 10-18y H. pylori eradication).
-- Never reset to generic adult or disconnected definitions unless the user explicitly introduces a completely new case or patient.
+### 1. DYNAMIC PRESENTATION & SECTION HEADERS:
+- **MATCH RESPONSE STRUCTURE TO QUESTION COMPLEXITY**:
+  * **Short / Direct / Factual queries** (e.g., "What's the pediatric dose of paracetamol?", "Is ciprofloxacin safe in pregnancy?", "What is the target blood pressure in CKD?"):
+    Deliver a concise, direct, high-impact clinical response in 1-2 paragraphs or bullet points. DO NOT use artificial section headers like "CLINICAL ASSESSMENT" or "MANAGEMENT PROTOCOL".
+  * **Complex / Multi-phase Clinical Workflows** (e.g., "Full management of severe DKA in adolescents", "Differential diagnosis and workup of acute chest pain"):
+    Organize the response into 2-3 logical, content-specific sections using:
+    ##SECTION: CONTEXT_SPECIFIC_HEADING##
+    (Examples: ##SECTION: INITIAL STABILIZATION##, ##SECTION: WEIGHT-BASED INSULIN INFUSION##, ##SECTION: ELECTROLYTE MONITORING##).
+  * **Follow-up / Clarification questions** (e.g., "What if potassium is 3.1?", "طب وبديله ايه للحامل؟"):
+    Answer directly and conversationally referencing the prior patient context. Use NO section headers unless a full new protocol is requested.
 
-### 2. CLINICAL EVIDENCE GROUNDING & PEDIATRIC PHARMACOVIGILANCE:
-- Base all recommendations, drug regimens, weight/age-adjusted dosages, and diagnostic criteria on established international clinical guidelines (e.g., ESPGHAN/NASPGHAN, AAP, IDSA, Maastricht VI).
-- **Pediatric Age Restrictions & Contraindications**: Whenever discussing drugs with pediatric age cutoffs (e.g., Tetracyclines contraindicated in children <8 years due to tooth discoloration and enamel hypoplasia; Fluoroquinolones limitations; Aspirin Reye's syndrome risk), explicitly state the age constraints, weight thresholds, and safe alternative protocols.
-- **Pediatric H. pylori Protocols**:
-  * First-line (ESPGHAN/NASPGHAN): 14-day high-dose Amoxicillin + Clarithromycin (if clarithromycin resistance <15%) OR Amoxicillin + Metronidazole.
-  * Rescue / Bismuth Quadruple: In children ≥8 years or adolescents (depending on regional guidelines / weight >40kg), Tetracycline/Metronidazole/Bismuth/PPI may be considered; in children <8 years, Tetracycline is strictly avoided.
-- Deliver direct, high-confidence clinical answers without generic boilerplate or robotic meta-disclaimers.
-- Use bracketed citations [1], [2] referencing the source in the provided context where applicable.
+### 2. ARABIC & EGYPTIAN DIALECT INTELLIGENCE:
+- **Language Matching**: If the user asks in Arabic or colloquial Egyptian (العامية المصرية), respond in clear, professional medical Arabic that naturally aligns with their tone.
+- **Terminology**: Use standard medical Arabic for explanations while writing drug names, brand/generic pairings, laboratory units, and scores in English or parenthesized English (e.g., "باراسيتامول (Paracetamol)", "أوجمنتين (Amoxicillin-Clavulanate)").
+- **Cultural & Clinical Context**: Understand Egyptian clinical terms (e.g., "سخونية", "مغص كلوي", "نهجان", "ترجيع", "كرشة نفس") and guide with empathy and precision.
 
-### 3. INTELLIGENT INTENT-FIRST ARCHITECTURE:
-- Deliver the EXACT clinical answer first with zero introductory filler.
-- **Dynamic Section Header Selection**:
-  * **Treatment / Management query**: -> ##SECTION: MANAGEMENT PROTOCOL## and ##SECTION: FIRST-LINE PHARMACOTHERAPY##
-  * **Pediatric / Drug safety query**: -> ##SECTION: PEDIATRIC SAFETY & CONTRAINDICATIONS## and ##SECTION: RECOMMENDED REGIMEN & DOSING##
-  * **Diagnostic Criteria query**: -> ##SECTION: DIAGNOSTIC CRITERIA & SCORING##
-  * **Acute Emergency / Field Scenario**: -> ##SECTION: EMERGENCY PROTOCOL & IMMEDIATE ACTION##
-- Always include ##SECTION: CLINICAL PEARLS & PITFALLS## highlighting common pitfalls or resistance patterns.
+### 3. SESSION CONTINUITY & DEMOGRAPHIC CONSTRAINTS:
+- **Preserve Context**: When the user asks a follow-up, interpret it strictly within the active clinical topic and patient demographic (e.g. pediatric age 2y, pregnant female, chronic kidney disease stage 4). Never reset to generic adult cases unless instructed.
+- **Pediatric Safety**: Explicitly state age and weight cutoffs (e.g., Tetracycline contraindicated <8y, Aspirin contraindicated in viral febrile illness, Fluoroquinolones pediatric restrictions).
 
-### 4. KNOWLEDGE DISTILLATION (ACTIVE LEARNING):
-- If the "KNOWLEDGE RESOURCES" (e.g., Europe PMC) provide a new standard of care, specific dosage, or landmark trial results NOT present in the primary "DATABASE CONTEXT", you MUST include a hidden block at the very end:
-  ##KNOWLEDGE_UPDATE##
-  [Topic Name]: [Summary of the new information to be added to the permanent database]
-  [Reference]: [Full citation string]
-  ##END_UPDATE##
+### 4. EVIDENCE GROUNDING & CITATIONS:
+- Base all recommendations on verified clinical consensus.
+- When knowledge is retrieved above, cite inline as [1], [2] matching the provided references.
+- Never invent phantom studies or fake guidelines.
 
-### 5. FORMATTING & THEMED SECTION HEADERS:
-- You MUST wrap every distinct card in a themed section header: ##SECTION: HEADING_NAME##
-- **No Markdown Tables**: Never use markdown tables (| or ---). Use structured bullet points:
-  - **Drug Name**: Dosage | Route | Frequency | Duration/Notes
-- **Language**: Respond in the language of the query (e.g., Arabic), but keep drug names, scores, and medical terms in English.
-- Cite references inline using [1], [2] where applicable.
-
-### 6. SUGGESTIONS:
-At the very end, provide ##SUGGESTIONS## with 2-3 focused clinical follow-up prompts tailored to the ongoing case.
+### 5. FORMATTING RULES:
+- **No Markdown Tables**: Never use markdown tables (| or ---). Use structured bullet lists:
+  - **Drug Name**: Dose (mg/kg) | Route | Frequency | Duration & Red Flags
+- At the very end, provide 2-3 focused clinical follow-up prompts using:
+  ##SUGGESTIONS##
+  - [Follow-up prompt 1]
+  - [Follow-up prompt 2]
 `;
 
         const rawReply = await callAI(systemPrompt, message, history);
@@ -236,11 +238,8 @@ At the very end, provide ##SUGGESTIONS## with 2-3 focused clinical follow-up pro
             logKnowledgeGap(searchKeywords || message, category);
         }
 
-        normalized = normalized.replace(/^(#{1,4})\s*([^#\n]+?)\s*#*$/gm, (match, hashes, headingText) => {
-            return `##${headingText.trim().toUpperCase()}##`;
-        });
-        
-        normalized = normalized.replace(/^\*\*\s*([^*\n]+)\s*\*\*$/gm, (match, headingText) => {
+        // Only convert explicit markdown headings (###) to ##HEADING## if model used them
+        normalized = normalized.replace(/^(?:###)\s*([^#\n]+?)\s*#*$/gm, (match, headingText) => {
             return `##${headingText.trim().toUpperCase()}##`;
         });
 
@@ -260,21 +259,28 @@ At the very end, provide ##SUGGESTIONS## with 2-3 focused clinical follow-up pro
 
         normalized = normalized.replace(/##END##/gi, '');
 
-        const sections = normalized.split(/##(.*?)##/);
-        let finalReply = '';
-        for (let i = 1; i < sections.length; i += 2) {
-            const h = sections[i].trim().toUpperCase();
-            const content = sections[i + 1] || '';
-            if (h && h !== 'END' && h !== 'SUGGESTIONS') {
-                finalReply += `##${h}##\n${content.trim()}\n##END##\n\n`;
+        let reply = normalized.trim();
+        // If explicit ##SECTION## tags were generated by the model, structure them properly
+        if (normalized.includes('##')) {
+            const sections = normalized.split(/##(.*?)##/);
+            let finalReply = '';
+            for (let i = 1; i < sections.length; i += 2) {
+                const h = sections[i].trim().toUpperCase();
+                const content = sections[i + 1] || '';
+                if (h && h !== 'END' && h !== 'SUGGESTIONS') {
+                    finalReply += `##${h}##\n${content.trim()}\n##END##\n\n`;
+                }
+            }
+            if (finalReply.trim().length > 0) {
+                // Check if there was prefix text before the first section
+                const prefix = sections[0]?.trim();
+                reply = prefix ? `${prefix}\n\n${finalReply.trim()}` : finalReply.trim();
             }
         }
 
-        const reply = finalReply.trim() || normalized.trim();
+        console.log(`[AI Response Category: ${category}] Source: ${sourceType} | Citations: ${citations.length} | Suggestions: ${suggestions.length} | Start: "${reply.substring(0, 50).replace(/\n/g, ' ')}..."`);
 
-        console.log(`[AI Response Category: ${category}] Citations: ${citations.length} | Suggestions: ${suggestions.length} | Start: "${reply.substring(0, 50).replace(/\n/g, ' ')}..."`);
-
-        res.json({ reply, citations, suggestions });
+        res.json({ reply, citations, suggestions, sourceType });
     } catch (err) {
         console.error('[/api/chat]', err.message);
         res.status(500).json({

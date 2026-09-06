@@ -25,35 +25,35 @@ const getUpdateTheme = (item: MedicalUpdate) => {
   switch (item.category) {
     case 'Clinical Trial':
       return {
-        color: '#6dc2bd', // Medical Jewel Teal
+        color: '#4bc0b8', // Medical Jewel Teal
         gradient: ['rgba(109, 194, 189, 0.26)', '#0e2427', '#071315'] as const,
         border: 'rgba(109, 194, 189, 0.45)',
-        shadow: '#6dc2bd',
+        shadow: '#4bc0b8',
         tagIcon: 'flask' as const,
       };
     case 'Practice Guideline':
       return {
-        color: '#dbd4fd', // Soft Lavender / Periwinkle
-        gradient: ['rgba(219, 212, 253, 0.26)', '#1c1736', '#0c0919'] as const,
-        border: 'rgba(219, 212, 253, 0.45)',
-        shadow: '#dbd4fd',
+        color: '#cbc8f5', // Soft Lavender / Periwinkle
+        gradient: ['rgba(203, 200, 245, 0.26)', '#1c1736', '#0c0919'] as const,
+        border: 'rgba(203, 200, 245, 0.45)',
+        shadow: '#cbc8f5',
         tagIcon: 'ribbon' as const,
       };
     case 'FDA Approval':
       return {
-        color: '#defff9', // Luminous Mint
-        gradient: ['rgba(222, 255, 249, 0.26)', '#133534', '#061716'] as const,
-        border: 'rgba(222, 255, 249, 0.45)',
-        shadow: '#defff9',
+        color: '#a9e4e8', // Luminous Mint
+        gradient: ['rgba(169, 228, 232, 0.26)', '#133534', '#061716'] as const,
+        border: 'rgba(169, 228, 232, 0.45)',
+        shadow: '#a9e4e8',
         tagIcon: 'checkmark-circle' as const,
       };
     case 'Safety Alert':
     default:
       return {
-        color: '#ffc3dd', // Pastel Rose
-        gradient: ['rgba(255, 195, 221, 0.26)', '#381525', '#16070e'] as const,
-        border: 'rgba(255, 195, 221, 0.45)',
-        shadow: '#ffc3dd',
+        color: '#f9bac9', // Pastel Rose
+        gradient: ['rgba(249, 186, 201, 0.26)', '#381525', '#16070e'] as const,
+        border: 'rgba(249, 186, 201, 0.45)',
+        shadow: '#f9bac9',
         tagIcon: 'warning' as const,
       };
   }

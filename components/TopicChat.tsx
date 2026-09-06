@@ -4,10 +4,8 @@ import {
   Alert,
   Animated as RNAnimated,
   FlatList,
-  Keyboard,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -31,6 +29,7 @@ import { SPECIALTY_KNOWLEDGE, TopicItem } from "../constants/SpecialtyData";
 import { Colors } from "../constants/Colors";
 import FormattedClinicalText from "./FormattedClinicalText";
 import { KnowledgeMap } from "./KnowledgeMap";
+import { useKeyboardLift } from "../hooks/useKeyboardLift";
 
 const EASE_HEAVY = Easing.bezier(0.32, 0.72, 0, 1);
 
@@ -76,8 +75,8 @@ function parseMedicalSections(text: string): {
     }
   }
 
-  // 2. Try markdown ### or ## or bold headings (e.g. ### 1. Emergency Protocol or **Criteria:**)
-  const mdHeadingRegex = /(?:^|\n)(?:###?|\*\*)\s*([A-Za-z0-9\s/&,–—\(\):-]+?)(?:\*\*|:)?\s*\n/g;
+  // 2. Try explicit markdown headings (### Heading or ## Heading)
+  const mdHeadingRegex = /(?:^|\n)###?\s*([A-Za-z0-9\u0600-\u06FF\s/&,–—\(\):-]+?)\s*\n/g;
   const matches = [...text.matchAll(mdHeadingRegex)];
   if (matches.length >= 2) {
     const sections: MedicalSection[] = [];
@@ -95,29 +94,7 @@ function parseMedicalSections(text: string): {
     }
   }
 
-  // 3. Fallback: split long responses into logical thematic sections for dynamic map generation
-  const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(p => p.length > 15);
-  if (paragraphs.length >= 2) {
-    const defaultHeadings = [
-      'Clinical Assessment',
-      'Management Protocol',
-      'Investigations & Criteria',
-      'Pharmacotherapy & Dosing',
-      'Red Flags & Pearls',
-    ];
-    const sections = paragraphs.slice(0, 5).map((p, idx) => {
-      const leadBold = p.match(/^\*\*([^*]+)\*\*:?\s*([\s\S]*)/);
-      if (leadBold) {
-        return { heading: leadBold[1].trim(), content: leadBold[2].trim() || p };
-      }
-      return {
-        heading: defaultHeadings[idx] || `Section ${idx + 1}`,
-        content: p,
-      };
-    });
-    return { hasSections: true, sections, plainText: "" };
-  }
-
+  // If no explicit structured sections were requested/created, retain as single cohesive response
   return {
     hasSections: false,
     sections: [],
@@ -152,6 +129,18 @@ const SECTION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   "SURGICAL / PROCEDURAL CONSIDERATIONS": "cut-outline",
   "GREETING": "chatbubble-ellipses-outline",
 };
+
+function getSectionIcon(heading: string): keyof typeof Ionicons.glyphMap {
+  const upper = heading.toUpperCase().trim();
+  if (SECTION_ICONS[upper]) return SECTION_ICONS[upper];
+  if (upper.includes("DOSE") || upper.includes("DOSING") || upper.includes("PHARMA") || upper.includes("DRUG") || upper.includes("جرعة") || upper.includes("علاج")) return "flask-outline";
+  if (upper.includes("EMERGENCY") || upper.includes("FLAG") || upper.includes("CRITICAL") || upper.includes("طوارئ") || upper.includes("تحذير")) return "alert-circle-outline";
+  if (upper.includes("DIAGNOS") || upper.includes("CRITERIA") || upper.includes("SCORE") || upper.includes("تشخيص")) return "checkmark-done-circle-outline";
+  if (upper.includes("INVEST") || upper.includes("LAB") || upper.includes("WORKUP") || upper.includes("تحاليل") || upper.includes("فحوصات")) return "pulse-outline";
+  if (upper.includes("PEDIATRIC") || upper.includes("CHILD") || upper.includes("أطفال")) return "happy-outline";
+  if (upper.includes("PREGNAN") || upper.includes("حمل")) return "female-outline";
+  return "document-text-outline";
+}
 
 // Animated Thinking Wave
 const ThinkingIndicator: React.FC<{ themeColor: string }> = ({ themeColor }) => {
@@ -356,7 +345,7 @@ const TopicAiMessageItem: React.FC<{
             <Text className="text-gray-500 text-[10px] font-mono">{item.timestamp}</Text>
           </View>
 
-          {/* Structured Medical Cards or Plain Text */}
+          {/* Structured Medical Cards or Unified Direct Answer Card */}
           {hasSections ? (
             <View className="gap-2.5">
               {plainText.length > 0 && (
@@ -365,8 +354,7 @@ const TopicAiMessageItem: React.FC<{
                 </View>
               )}
               {sections.map((sec, sIdx) => {
-                const upperHeading = sec.heading.toUpperCase().trim();
-                const iconName = SECTION_ICONS[upperHeading] || "document-text-outline";
+                const iconName = getSectionIcon(sec.heading);
 
                 return (
                   <View
@@ -404,8 +392,44 @@ const TopicAiMessageItem: React.FC<{
               })}
             </View>
           ) : (
-            <View className="bg-[#0e1416] border border-white/10 rounded-3xl rounded-tl-md p-4">
-              <FormattedClinicalText text={item.text} />
+            <View
+              className="rounded-2xl overflow-hidden bg-[#0e1416] border"
+              style={{
+                borderColor: `${themeColor}30`,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 6,
+                elevation: 2,
+              }}
+            >
+              <View
+                className="flex-row items-center justify-between px-4 py-2 border-b"
+                style={{
+                  backgroundColor: `${themeColor}10`,
+                  borderBottomColor: `${themeColor}20`,
+                }}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="medical" size={13} color={themeColor} />
+                  <Text
+                    className="text-[11px] font-sans-bold uppercase tracking-wider"
+                    style={{ color: themeColor }}
+                  >
+                    Clinical Summary
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => onCopyText(item.text)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  className="opacity-70 active:opacity-100"
+                >
+                  <Ionicons name="copy-outline" size={13} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+              <View className="p-4">
+                <FormattedClinicalText text={item.text} />
+              </View>
             </View>
           )}
 
@@ -507,8 +531,12 @@ export default function TopicChat({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const keyboardHeightAnim = useRef(new RNAnimated.Value(0)).current;
+  const {
+    keyboardHeight,
+    manualLift,
+    liftAnim: keyboardHeightAnim,
+    containerProps,
+  } = useKeyboardLift();
   const flatListRef = useRef<FlatList>(null);
   const lastSentQueryRef = useRef<string | null>(null);
 
@@ -537,37 +565,13 @@ export default function TopicChat({
     flatListRef.current?.scrollToEnd({ animated: true });
   };
 
-  // Track real keyboard height — works in Android production/edge-to-edge builds
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      const h = e.endCoordinates.height;
-      setKeyboardHeight(h);
-      RNAnimated.timing(keyboardHeightAnim, {
-        toValue: h,
-        duration: Platform.OS === 'ios' ? 250 : 80,
-        useNativeDriver: false,
-      }).start();
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-      RNAnimated.timing(keyboardHeightAnim, {
-        toValue: 0,
-        duration: Platform.OS === 'ios' ? 200 : 80,
-        useNativeDriver: false,
-      }).start();
-    });
-    return () => { showSub.remove(); hideSub.remove(); };
-  }, [keyboardHeightAnim]);
-
   const specialty = SPECIALTY_KNOWLEDGE[specialtyId] || {
     title: "Specialty",
-    color: "#6dc2bd",
+    color: "#4bc0b8",
     categories: [],
   };
 
-  const themeColor = propThemeColor || specialty.color || "#6dc2bd";
+  const themeColor = propThemeColor || specialty.color || "#4bc0b8";
 
   // Find topic subtitle & starter prompts
   let topicData: any = null;
@@ -735,7 +739,7 @@ export default function TopicChat({
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }} {...containerProps}>
       <View className="flex-1 bg-background">
         <FlatList
           ref={flatListRef}
@@ -794,7 +798,7 @@ export default function TopicChat({
           style={[
             styles.jumpControlsContainer,
             {
-              bottom: keyboardHeight > 0 ? keyboardHeight + 65 : 75,
+              bottom: keyboardHeight > 0 ? manualLift + 65 : 75,
             },
           ]}
           pointerEvents="box-none"
@@ -845,6 +849,10 @@ export default function TopicChat({
               returnKeyType="send"
               onSubmitEditing={() => handleTextSend()}
               editable={!isTyping}
+              multiline
+              submitBehavior="newline"
+              textAlignVertical="top"
+              style={{ maxHeight: 120 }}
             />
           </View>
           <TouchableOpacity

@@ -245,44 +245,44 @@ function getSectionCardStyle(title: string, themeColor: string) {
   // Clinical Definition & Overview (Clean Lavender / Indigo)
   if (lower.includes('definition') || lower.includes('overview') || lower.includes('introduction')) {
     return {
-      cardBg: 'rgba(219, 212, 253, 0.08)',
-      cardBorder: 'rgba(219, 212, 253, 0.4)',
-      iconBg: 'rgba(219, 212, 253, 0.2)',
-      iconBorder: 'rgba(219, 212, 253, 0.55)',
-      iconColor: '#dbd4fd',
+      cardBg: 'rgba(203, 200, 245, 0.08)',
+      cardBorder: 'rgba(203, 200, 245, 0.4)',
+      iconBg: 'rgba(203, 200, 245, 0.2)',
+      iconBorder: 'rgba(203, 200, 245, 0.55)',
+      iconColor: '#cbc8f5',
     };
   }
 
   // Operative Steps & Techniques (Surgical Cut - Vibrant Mint/Teal)
   if (lower.includes('operative step') || lower.includes('surgical technique') || lower.includes('dissection')) {
     return {
-      cardBg: 'rgba(222, 255, 249, 0.07)',
-      cardBorder: 'rgba(222, 255, 249, 0.35)',
-      iconBg: 'rgba(222, 255, 249, 0.18)',
-      iconBorder: 'rgba(222, 255, 249, 0.5)',
-      iconColor: '#defff9',
+      cardBg: 'rgba(169, 228, 232, 0.07)',
+      cardBorder: 'rgba(169, 228, 232, 0.35)',
+      iconBg: 'rgba(169, 228, 232, 0.18)',
+      iconBorder: 'rgba(169, 228, 232, 0.5)',
+      iconColor: '#a9e4e8',
     };
   }
 
   // Preoperative Risk & Preparation (Shield - Rose / Light Amber)
   if (lower.includes('preoperative') || lower.includes('pre-op') || lower.includes('clearance')) {
     return {
-      cardBg: 'rgba(255, 195, 221, 0.07)',
-      cardBorder: 'rgba(255, 195, 221, 0.35)',
-      iconBg: 'rgba(255, 195, 221, 0.18)',
-      iconBorder: 'rgba(255, 195, 221, 0.5)',
-      iconColor: '#ffc3dd',
+      cardBg: 'rgba(249, 186, 201, 0.07)',
+      cardBorder: 'rgba(249, 186, 201, 0.35)',
+      iconBg: 'rgba(249, 186, 201, 0.18)',
+      iconBorder: 'rgba(249, 186, 201, 0.5)',
+      iconColor: '#f9bac9',
     };
   }
 
   // Clinical Pitfalls & Malpractice Warnings / Critical Alerts (Pastel Rose Pink)
   if (lower.includes('complication') || lower.includes('pitfall') || lower.includes('malpractice') || lower.includes('warning') || lower.includes('red flag') || lower.includes('emergency')) {
     return {
-      cardBg: 'rgba(255, 195, 221, 0.08)',
-      cardBorder: 'rgba(255, 195, 221, 0.45)',
-      iconBg: 'rgba(255, 195, 221, 0.2)',
-      iconBorder: 'rgba(255, 195, 221, 0.6)',
-      iconColor: '#ffc3dd',
+      cardBg: 'rgba(249, 186, 201, 0.08)',
+      cardBorder: 'rgba(249, 186, 201, 0.45)',
+      iconBg: 'rgba(249, 186, 201, 0.2)',
+      iconBorder: 'rgba(249, 186, 201, 0.6)',
+      iconColor: '#f9bac9',
     };
   }
 
@@ -293,7 +293,7 @@ function getSectionCardStyle(title: string, themeColor: string) {
       cardBorder: 'rgba(109, 194, 189, 0.35)',
       iconBg: 'rgba(109, 194, 189, 0.18)',
       iconBorder: 'rgba(109, 194, 189, 0.5)',
-      iconColor: '#6dc2bd',
+      iconColor: '#4bc0b8',
     };
   }
 

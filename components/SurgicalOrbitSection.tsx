@@ -22,7 +22,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'GI Surgery',
     scientificName: 'Gastrointestinal & General Surgery',
     icon: 'cut',
-    color: '#ffc3dd', // Rose
+    color: '#f9bac9', // Rose
     description: 'Hepatobiliary, colorectal, laparoscopy, and acute abdomen',
   },
   {
@@ -30,7 +30,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Neurosurgery',
     scientificName: 'Neurological & Spine Surgery',
     icon: 'pulse',
-    color: '#defff9', // Mint
+    color: '#a9e4e8', // Mint
     description: 'Craniotomy, brain trauma, spine instrumentation, and ACDF',
   },
   {
@@ -38,7 +38,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Cardiothoracic',
     scientificName: 'Cardiothoracic & Thoracic Surgery',
     icon: 'heart',
-    color: '#6dc2bd', // Teal
+    color: '#4bc0b8', // Teal
     description: 'CABG, valve replacement, VATS lobectomy, and CPB',
   },
   {
@@ -46,7 +46,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Vascular',
     scientificName: 'Vascular & Endovascular Surgery',
     icon: 'git-network',
-    color: '#dbd4fd', // Lavender
+    color: '#cbc8f5', // Lavender
     description: 'EVAR, carotid endarterectomy, bypass, and limb salvage',
   },
   {
@@ -54,7 +54,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Trauma & Acute',
     scientificName: 'Trauma & Acute Care Surgery',
     icon: 'flame',
-    color: '#ffc3dd', // Rose
+    color: '#f9bac9', // Rose
     description: 'Damage control laparotomy, lethal triad, and thoracotomy',
   },
   {
@@ -62,7 +62,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Orthopedics',
     scientificName: 'Orthopedic & Trauma Surgery',
     icon: 'fitness',
-    color: '#defff9', // Mint
+    color: '#a9e4e8', // Mint
     description: 'Total hip/knee arthroplasty, fracture fixation, and ACL',
   },
   {
@@ -70,7 +70,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Urology',
     scientificName: 'Urological & Pelvic Surgery',
     icon: 'medkit',
-    color: '#6dc2bd', // Teal
+    color: '#4bc0b8', // Teal
     description: 'Endourology, laser lithotripsy, robotic prostatectomy, and torsion',
   },
   {
@@ -78,7 +78,7 @@ export const SURGICAL_ORBIT_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Plastic Surgery',
     scientificName: 'Plastic, Reconstructive & Burn Surgery',
     icon: 'body-outline',
-    color: '#ffc3dd', // Rose
+    color: '#f9bac9', // Rose
     description: 'Microsurgical free flap transfer, skin grafting, burn excision, and wound coverage',
   },
 ];
@@ -90,7 +90,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Pediatric Surgery',
     scientificName: 'Pediatric & Neonatal Surgery',
     icon: 'people-outline',
-    color: '#defff9',
+    color: '#a9e4e8',
     description: 'Congenital anomalies, pediatric hernia, pyloric stenosis, and Hirschsprung disease',
   },
   {
@@ -98,7 +98,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'ENT / Head & Neck',
     scientificName: 'Otolaryngology & Head/Neck Surgery',
     icon: 'headset-outline',
-    color: '#6dc2bd',
+    color: '#4bc0b8',
     description: 'Tracheostomy, neck dissection, thyroidectomy, endoscopic sinus surgery, and mastoidectomy',
   },
   {
@@ -106,7 +106,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Surgical Oncology',
     scientificName: 'Complex General Surgical Oncology',
     icon: 'shield-outline',
-    color: '#dbd4fd',
+    color: '#cbc8f5',
     description: 'Hyperthermic intraperitoneal chemotherapy (HIPEC), sarcoma resection, and sentinel lymph node biopsy',
   },
   {
@@ -114,7 +114,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Transplant Surgery',
     scientificName: 'Abdominal & Thoracic Organ Transplantation',
     icon: 'repeat-outline',
-    color: '#defff9',
+    color: '#a9e4e8',
     description: 'Deceased & living donor renal transplant, orthotopic liver transplant, and immunosuppression',
   },
   {
@@ -122,7 +122,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Bariatric',
     scientificName: 'Bariatric & Metabolic Surgery',
     icon: 'resize-outline',
-    color: '#ffc3dd',
+    color: '#f9bac9',
     description: 'Sleeve gastrectomy, Roux-en-Y gastric bypass, and metabolic syndrome resolution',
   },
   {
@@ -130,7 +130,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Hepatobiliary',
     scientificName: 'Hepatobiliary & Pancreatic Surgery',
     icon: 'flask-outline',
-    color: '#6dc2bd',
+    color: '#4bc0b8',
     description: 'Whipple procedure, hepatectomy, bile duct reconstruction, and pancreatic necrosectomy',
   },
   {
@@ -138,7 +138,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Maxillofacial',
     scientificName: 'Oral & Maxillofacial Surgery',
     icon: 'happy-outline',
-    color: '#dbd4fd',
+    color: '#cbc8f5',
     description: 'Orthognathic surgery, TMJ reconstruction, facial fracture fixation, and cleft repair',
   },
   {
@@ -146,7 +146,7 @@ export const EXPANDED_SURGICAL_SPECIALTIES: SurgicalSpecialtyItem[] = [
     name: 'Endocrine Surgery',
     scientificName: 'Endocrine & Thyroid Surgery',
     icon: 'nuclear-outline',
-    color: '#defff9',
+    color: '#a9e4e8',
     description: 'Thyroidectomy, parathyroidectomy, adrenalectomy, and MEN syndrome management',
   },
 ];

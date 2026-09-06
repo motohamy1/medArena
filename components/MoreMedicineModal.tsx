@@ -60,11 +60,11 @@ export const MoreMedicineModal: React.FC<MoreMedicineModalProps> = ({
             {/* Header */}
             <View className="flex-row items-center justify-between pb-3.5 border-b border-white/10">
               <View className="flex-row items-center gap-2.5">
-                <View className="w-10 h-10 rounded-2xl bg-[#6dc2bd]20 border border-[#6dc2bd]40 items-center justify-center">
-                  <Ionicons name="medical" size={20} color="#6dc2bd" />
+                <View className="w-10 h-10 rounded-2xl bg-[#4bc0b8]20 border border-[#4bc0b8]40 items-center justify-center">
+                  <Ionicons name="medical" size={20} color="#4bc0b8" />
                 </View>
                 <View>
-                  <Text className="text-[10px] font-mono text-[#6dc2bd] font-bold uppercase tracking-wider">
+                  <Text className="text-[10px] font-mono text-[#4bc0b8] font-bold uppercase tracking-wider">
                     Expanded Clinical Disciplines
                   </Text>
                   <Text className="text-[17px] font-sans-bold text-white leading-tight">

@@ -14,10 +14,11 @@ module.exports = {
         "teal-medium": Colors.tealMedium,
         "surface-hover": Colors.surfaceHover,
         // Signature 4-Color Palette (User Palette)
-        main: Colors.main, // #defff9 (Main Ice Mint)
-        primary: Colors.main, // #defff9
-        accent: Colors.accent, // #defff9
-        turquoise: Colors.teal, // #6dc2bd (Jewel Teal)
+        main: Colors.main, // #a9e4e8 (Glacier Aqua)
+        primary: Colors.main, // #a9e4e8
+        accent: Colors.accent, // #a9e4e8
+        ice: Colors.ice, // #defff9 (Ice Mint — gradient caps only)
+        turquoise: Colors.teal, // #4bc0b8 (Deep Aqua Teal)
         teal: Colors.teal, // #6dc2bd
         lime: Colors.main, // #defff9 (Mapped to Main #defff9)
         lavender: Colors.lavender, // #dbd4fd (Soft Lavender)
@@ -49,7 +50,7 @@ module.exports = {
         "mono-medium": ["PlexMono_500Medium"],
       },
       boxShadow: {
-        "glow-cyan": "0 0 20px rgba(110, 194, 190, 0.28)",
+        "glow-cyan": "0 0 20px rgba(75, 192, 184, 0.28)",
         "glow-gold": "0 0 20px rgba(210, 182, 137, 0.3)",
         "bubble": "0 4px 12px rgba(0, 0, 0, 0.4)",
         "card": "0 8px 32px rgba(0, 0, 0, 0.5)",

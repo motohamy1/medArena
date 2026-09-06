@@ -22,56 +22,58 @@
  */
 
 export const Colors = {
-  // Neutral graphite surfaces — quiet-teal ramp on sleek minimal pitch black
-  background: '#010101', // ultra-sleek minimal dark OLED pitch black
-  deepTeal: '#080c0d',
-  tealDark: '#0e1416',
-  tealMedium: '#141b1d',
-  surfaceHover: '#1c2527',
+  // Neutral graphite surfaces — quiet-teal ramp (H=225) on deep petrol black
+  background: '#091114', // oklch(0.170 0.013 225) deep petrol, OLED-friendly
+  deepTeal: '#111b1f', // oklch(0.215 0.017 225)
+  tealDark: '#19262b', // oklch(0.260 0.020 225)
+  tealMedium: '#243339', // oklch(0.310 0.023 225)
+  surfaceHover: '#31434a', // oklch(0.370 0.026 225)
 
-  // Four Main Core Colors (User Palette)
-  main: '#defff9',          // Main App Color — Luminous Frosted Aqua Mint
-  accent: '#defff9',        // Primary highlight / brand action color
-  teal: '#6dc2bd',          // Medical Jewel Teal / Cyan Contrast
-  lavender: '#dbd4fd',      // Soft Lavender / Periwinkle
-  pink: '#ffc3dd',          // Pastel Rose Pink
-  lime: '#defff9',          // Mapped to main #defff9 for backward compatibility
+  // Core identity colors
+  main: '#a9e4e8',          // Main App Color — Glacier Aqua (oklch 0.880 0.060 202)
+  accent: '#a9e4e8',        // Primary highlight / brand action color
+  ice: '#defff9',           // Ice Mint — gradient caps & shimmer only, never text
+  teal: '#4bc0b8',          // Deep Aqua Teal (oklch 0.740 0.105 189)
+  lavender: '#cbc8f5',      // Soft Lavender / Periwinkle (oklch 0.850 0.062 288)
+  pink: '#f9bac9',          // Pastel Rose (oklch 0.850 0.075 3)
+  lime: '#a9e4e8',          // Mapped to main for backward compatibility
 
   // Harmonized Gradient & Functional Aliases
-  accentBright: '#defff9',
-  accentDeep: '#6dc2bd',
-  gold: '#dbd4fd',          // Soft Lavender / Periwinkle for signal highlights & badges
-  clinicalGold: '#dbd4fd',  // Soft Lavender for secondary clinical badges
-  terracotta: '#ffc3dd',    // Pastel Rose for alerts, pitfalls, and critical markers
-  terracottaDeep: '#e08ca9',
+  accentBright: '#a9e4e8',
+  accentDeep: '#4bc0b8',
+  gold: '#cbc8f5',          // Soft Lavender / Periwinkle for signal highlights & badges
+  clinicalGold: '#cbc8f5',  // Soft Lavender for secondary clinical badges
+  terracotta: '#f9bac9',    // Pastel Rose for alerts, pitfalls, and critical markers
+  terracottaDeep: '#d76a87', // oklch(0.660 0.140 5)
 
   // Text & utility neutrals
-  charcoal: '#263033',
-  grayDark: '#161c1e',
-  grayMuted: '#9ca3af',
-  graySubtle: '#7b8188',
-  textPrimary: '#ffffff',
-  textBody: '#e4e8ed',
-  ink: '#010101',
+  charcoal: '#3e5058', // oklch(0.420 0.026 225)
+  grayDark: '#1e2b30', // oklch(0.280 0.020 225)
+  grayMuted: '#889598', // oklch(0.660 0.015 215)
+  graySubtle: '#78868a', // oklch(0.610 0.018 215)
+  textPrimary: '#eef5f5', // oklch(0.965 0.008 195) soft near-white, low glare
+  textBody: '#cfdada', // oklch(0.880 0.012 200)
+  ink: '#091114', // matches background — text on filled accent surfaces
 
   // Medicine reference surfaces
-  medicineBg: '#151d1f',
-  medicineCard: '#090e0f',
+  medicineBg: '#223036', // oklch(0.300 0.022 225)
+  medicineCard: '#0c1519', // oklch(0.190 0.015 225)
 
   // Composer / floating islands
-  islandBg: '#090d0e',
-  tabIslandBg: '#040808',
+  islandBg: '#0e181c', // oklch(0.200 0.016 225)
+  tabIslandBg: '#0b1316', // oklch(0.180 0.014 225)
 
-  // Specialty palette — harmonized using the 4 main palette colors (#defff9, #ffc3dd, #dbd4fd, #6dc2bd)
+  // Specialty palette — one lightness (L=0.700), one chroma (C=0.075), hue rotates.
+  // Pulmonology shares the accent hue; `more` is the neutral overflow slot.
   specialty: {
-    cardiology: '#ffc3dd',  // Pastel Pink
-    git: '#defff9',         // Main Ice Mint
-    infectious: '#6dc2bd',  // Jewel Teal
-    neurology: '#dbd4fd',   // Soft Lavender
-    dermatology: '#ffc3dd', // Pastel Pink
-    obgyn: '#dbd4fd',       // Soft Lavender
-    pulmonology: '#6dc2bd', // Jewel Teal
-    more: '#defff9',        // Main Ice Mint
+    cardiology: '#c78b98',   // oklch(0.7 0.075 5)   dusty rose
+    git: '#a9a069',          // oklch(0.7 0.075 100)  olive
+    infectious: '#86aa7e',   // oklch(0.7 0.075 140)  sage
+    neurology: '#7fa1cd',    // oklch(0.7 0.075 255)  steel periwinkle
+    dermatology: '#c88e7f',  // oklch(0.7 0.075 35)   clay
+    obgyn: '#b490bc',        // oklch(0.7 0.075 320)  mauve
+    pulmonology: '#62adb2',  // oklch(0.7 0.075 202)  glacier aqua (accent hue)
+    more: '#98a0a3',         // oklch(0.7 0.010 225)  neutral
   },
 } as const;
 

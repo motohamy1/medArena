@@ -48,11 +48,16 @@ export default function CategoryPage() {
 
   const loadData = async (forceRefresh = false) => {
     try {
-      const [remoteSpec, remoteCat] = await Promise.all([
-        dbService.getSpecialty(specId, forceRefresh),
-        dbService.getCategory(specId, catId, forceRefresh),
-      ]);
-      if (remoteSpec) setSpecialty(remoteSpec);
+      const remoteSpec = await dbService.getSpecialty(specId, forceRefresh);
+      if (remoteSpec) {
+        setSpecialty(remoteSpec);
+        const catInSpec = remoteSpec.categories?.find((c) => c.id === catId);
+        if (catInSpec && catInSpec.topics && catInSpec.topics.length > 0) {
+          setCategory(catInSpec);
+          return;
+        }
+      }
+      const remoteCat = await dbService.getCategory(specId, catId, forceRefresh);
       if (remoteCat) setCategory(remoteCat);
     } finally {
       setIsRefreshing(false);

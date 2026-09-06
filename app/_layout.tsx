@@ -38,7 +38,7 @@ class ErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <View style={{ flex: 1, backgroundColor: "#010101", justifyContent: "center", alignItems: "center", padding: 24 }}>
-          <Text style={{ color: "#ffc3dd", fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
+          <Text style={{ color: "#f9bac9", fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
             Medical Arena
           </Text>
           <Text style={{ color: "#999", fontSize: 14, textAlign: "center" }}>

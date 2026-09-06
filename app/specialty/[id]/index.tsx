@@ -19,85 +19,85 @@ import { dbService } from '../../../services/dbService';
 import { SpecialtyData, SPECIALTY_KNOWLEDGE, getSpecialtyKnowledge } from '../../../constants/SpecialtyData';
 import { Colors } from '../../../constants/Colors';
 
-// Category theme config matching the 4-color base palette (#defff9, #6dc2bd, #dbd4fd, #ffc3dd)
+// Category theme config matching the 4-color base palette (#a9e4e8, #4bc0b8, #cbc8f5, #f9bac9)
 const getCategoryTheme = (categoryId: string, index: number) => {
   switch (categoryId) {
     case 'emergencies':
       return {
-        color: '#ffc3dd', // Pastel Pink / Rose
+        color: '#f9bac9', // Pastel Pink / Rose
         gradient: ['#3e1628', '#240d18', '#14070e'] as const,
-        border: 'rgba(255, 195, 221, 0.45)',
-        iconBg: 'rgba(255, 195, 221, 0.22)',
-        iconBorder: 'rgba(255, 195, 221, 0.55)',
-        shadow: '#ffc3dd',
+        border: 'rgba(249, 186, 201, 0.45)',
+        iconBg: 'rgba(249, 186, 201, 0.22)',
+        iconBorder: 'rgba(249, 186, 201, 0.55)',
+        shadow: '#f9bac9',
         tag: 'EMERGENCY',
       };
     case 'clinical_topics':
       return {
-        color: '#defff9', // Luminous Mint
+        color: '#a9e4e8', // Luminous Mint
         gradient: ['#143836', '#0d2524', '#061716'] as const,
-        border: 'rgba(222, 255, 249, 0.45)',
-        iconBg: 'rgba(222, 255, 249, 0.22)',
-        iconBorder: 'rgba(222, 255, 249, 0.55)',
-        shadow: '#defff9',
+        border: 'rgba(169, 228, 232, 0.45)',
+        iconBg: 'rgba(169, 228, 232, 0.22)',
+        iconBorder: 'rgba(169, 228, 232, 0.55)',
+        shadow: '#a9e4e8',
         tag: 'GUIDELINES',
       };
     case 'tools':
       return {
-        color: '#6dc2bd', // Medical Jewel Teal
+        color: '#4bc0b8', // Medical Jewel Teal
         gradient: ['#123635', '#0b2423', '#051615'] as const,
         border: 'rgba(109, 194, 189, 0.45)',
         iconBg: 'rgba(109, 194, 189, 0.22)',
         iconBorder: 'rgba(109, 194, 189, 0.55)',
-        shadow: '#6dc2bd',
+        shadow: '#4bc0b8',
         tag: 'DIAGNOSTICS',
       };
     case 'research':
       return {
-        color: '#dbd4fd', // Soft Lavender / Periwinkle
+        color: '#cbc8f5', // Soft Lavender / Periwinkle
         gradient: ['#292048', '#1a1432', '#0e0b1c'] as const,
-        border: 'rgba(219, 212, 253, 0.45)',
-        iconBg: 'rgba(219, 212, 253, 0.22)',
-        iconBorder: 'rgba(219, 212, 253, 0.55)',
-        shadow: '#dbd4fd',
+        border: 'rgba(203, 200, 245, 0.45)',
+        iconBg: 'rgba(203, 200, 245, 0.22)',
+        iconBorder: 'rgba(203, 200, 245, 0.55)',
+        shadow: '#cbc8f5',
         tag: 'EVIDENCE',
       };
     default: {
       const palette = [
         {
-          color: '#defff9',
+          color: '#a9e4e8',
           gradient: ['#143836', '#0d2524', '#061716'] as const,
-          border: 'rgba(222, 255, 249, 0.45)',
-          iconBg: 'rgba(222, 255, 249, 0.22)',
-          iconBorder: 'rgba(222, 255, 249, 0.55)',
-          shadow: '#defff9',
+          border: 'rgba(169, 228, 232, 0.45)',
+          iconBg: 'rgba(169, 228, 232, 0.22)',
+          iconBorder: 'rgba(169, 228, 232, 0.55)',
+          shadow: '#a9e4e8',
           tag: 'SECTION',
         },
         {
-          color: '#6dc2bd',
+          color: '#4bc0b8',
           gradient: ['#123635', '#0b2423', '#051615'] as const,
           border: 'rgba(109, 194, 189, 0.45)',
           iconBg: 'rgba(109, 194, 189, 0.22)',
           iconBorder: 'rgba(109, 194, 189, 0.55)',
-          shadow: '#6dc2bd',
+          shadow: '#4bc0b8',
           tag: 'SECTION',
         },
         {
-          color: '#dbd4fd',
+          color: '#cbc8f5',
           gradient: ['#292048', '#1a1432', '#0e0b1c'] as const,
-          border: 'rgba(219, 212, 253, 0.45)',
-          iconBg: 'rgba(219, 212, 253, 0.22)',
-          iconBorder: 'rgba(219, 212, 253, 0.55)',
-          shadow: '#dbd4fd',
+          border: 'rgba(203, 200, 245, 0.45)',
+          iconBg: 'rgba(203, 200, 245, 0.22)',
+          iconBorder: 'rgba(203, 200, 245, 0.55)',
+          shadow: '#cbc8f5',
           tag: 'SECTION',
         },
         {
-          color: '#ffc3dd',
+          color: '#f9bac9',
           gradient: ['#3e1628', '#240d18', '#14070e'] as const,
-          border: 'rgba(255, 195, 221, 0.45)',
-          iconBg: 'rgba(255, 195, 221, 0.22)',
-          iconBorder: 'rgba(255, 195, 221, 0.55)',
-          shadow: '#ffc3dd',
+          border: 'rgba(249, 186, 201, 0.45)',
+          iconBg: 'rgba(249, 186, 201, 0.22)',
+          iconBorder: 'rgba(249, 186, 201, 0.55)',
+          shadow: '#f9bac9',
           tag: 'SECTION',
         },
       ];
@@ -250,7 +250,10 @@ export default function SpecialtyDashboard() {
           
           <View className="absolute bottom-4 left-6 right-6">
              <View className="flex-row items-center gap-2 mb-1">
-               <View className="px-2.5 py-0.5 rounded-full bg-black/60 border border-white/15">
+               <View className="px-2.5 py-0.5 rounded-full bg-black/60 border border-white/15 flex-row items-center gap-1.5">
+                 {isLoadingRemote && (
+                   <ActivityIndicator size={10} color={specialty.color} />
+                 )}
                  <Text className="text-[10px] text-main font-sans-bold uppercase">
                    {totalTopicsCount} Reference Protocols
                  </Text>

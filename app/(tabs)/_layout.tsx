@@ -122,7 +122,7 @@ function NotchedTabBar({ state, descriptors, navigation }: any) {
         {/* Sliding Active Indicator (The "Liquid" part) - Sized for Icon Only */}
         <Animated.View style={[styles.activeIndicator, indicatorStyle, { width: 44, height: 44 }]}>
            <LinearGradient
-            colors={[Colors.main, '#9dffd9']}
+            colors={[Colors.main, Colors.teal]}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}

@@ -646,13 +646,13 @@ export default function Index() {
               <Ionicons
                 name="cut"
                 size={14}
-                color={activeTab === 'surgery' ? '#6dc2bd' : '#8e8e93'}
+                color={activeTab === 'surgery' ? '#4bc0b8' : '#8e8e93'}
                 style={{ marginRight: 6 }}
               />
               <Text
                 style={[
                   styles.tabText,
-                  activeTab === 'surgery' && { color: '#6dc2bd', fontWeight: '700' },
+                  activeTab === 'surgery' && { color: '#4bc0b8', fontWeight: '700' },
                 ]}
               >
                 Surgery

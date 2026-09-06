@@ -76,20 +76,20 @@ type Proposal = {
 };
 
 const SPECIALTIES = [
-  { id: 'pulmonology', name: 'Pulmonology', icon: 'fitness-outline', color: '#6dc2bd' },
-  { id: 'heart', name: 'Cardiology', icon: 'heart-outline', color: '#ffc3dd' },
-  { id: 'git', name: 'Gastroenterology', icon: 'restaurant-outline', color: '#defff9' },
-  { id: 'neuro', name: 'Neurology', icon: 'git-network-outline', color: '#dbd4fd' },
-  { id: 'nephrology', name: 'Nephrology', icon: 'water-outline', color: '#defff9' },
-  { id: 'endocrinology', name: 'Endocrinology', icon: 'speedometer-outline', color: '#ffc3dd' },
-  { id: 'critical_care', name: 'Critical Care / ICU', icon: 'medkit-outline', color: '#6dc2bd' },
-  { id: 'pediatrics', name: 'Pediatrics', icon: 'happy-outline', color: '#defff9' },
-  { id: 'hematology_oncology', name: 'Heme-Onc', icon: 'shield-outline', color: '#dbd4fd' },
-  { id: 'rheumatology', name: 'Rheumatology', icon: 'body-outline', color: '#ffc3dd' },
-  { id: 'psychiatry', name: 'Psychiatry', icon: 'sparkles-outline', color: '#6dc2bd' },
-  { id: 'ophthalmology', name: 'Ophthalmology', icon: 'eye-outline', color: '#dbd4fd' },
-  { id: 'dermatology', name: 'Dermatology', icon: 'bandage-outline', color: '#ffc3dd' },
-  { id: 'surgical_suite', name: 'Surgical Suite', icon: 'cut-outline', color: '#6dc2bd' },
+  { id: 'pulmonology', name: 'Pulmonology', icon: 'fitness-outline', color: '#4bc0b8' },
+  { id: 'heart', name: 'Cardiology', icon: 'heart-outline', color: '#f9bac9' },
+  { id: 'git', name: 'Gastroenterology', icon: 'restaurant-outline', color: '#a9e4e8' },
+  { id: 'neuro', name: 'Neurology', icon: 'git-network-outline', color: '#cbc8f5' },
+  { id: 'nephrology', name: 'Nephrology', icon: 'water-outline', color: '#a9e4e8' },
+  { id: 'endocrinology', name: 'Endocrinology', icon: 'speedometer-outline', color: '#f9bac9' },
+  { id: 'critical_care', name: 'Critical Care / ICU', icon: 'medkit-outline', color: '#4bc0b8' },
+  { id: 'pediatrics', name: 'Pediatrics', icon: 'happy-outline', color: '#a9e4e8' },
+  { id: 'hematology_oncology', name: 'Heme-Onc', icon: 'shield-outline', color: '#cbc8f5' },
+  { id: 'rheumatology', name: 'Rheumatology', icon: 'body-outline', color: '#f9bac9' },
+  { id: 'psychiatry', name: 'Psychiatry', icon: 'sparkles-outline', color: '#4bc0b8' },
+  { id: 'ophthalmology', name: 'Ophthalmology', icon: 'eye-outline', color: '#cbc8f5' },
+  { id: 'dermatology', name: 'Dermatology', icon: 'bandage-outline', color: '#f9bac9' },
+  { id: 'surgical_suite', name: 'Surgical Suite', icon: 'cut-outline', color: '#4bc0b8' },
 ];
 
 export default function ReviewQueue() {
@@ -421,7 +421,7 @@ export default function ReviewQueue() {
               fetchMissionStatus();
               fetchProposals();
             }}
-            tintColor="#defff9"
+            tintColor="#a9e4e8"
           />
         }
       >

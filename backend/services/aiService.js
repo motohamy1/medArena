@@ -182,6 +182,52 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
     throw lastError || new Error("No AI providers available or all quotas exhausted.");
 }
 
+// Common Egyptian colloquial symptom and drug mappings for keyword extraction fallback
+const EGYPTIAN_MEDICAL_TERMS = {
+    'سخونية': 'fever',
+    'حرارة': 'fever',
+    'ترجيع': 'vomiting',
+    'استفراغ': 'vomiting',
+    'قشط': 'infant regurgitation reflux',
+    'غممان نفس': 'nausea',
+    'لعيان': 'nausea',
+    'اسهال': 'diarrhea',
+    'إسهال': 'diarrhea',
+    'امساك': 'constipation',
+    'إمساك': 'constipation',
+    'مغص': 'abdominal colic pain',
+    'كرشة نفس': 'dyspnea shortness of breath',
+    'نهجان': 'dyspnea tachypnea',
+    'كحة': 'cough',
+    'بلغم': 'sputum productive cough',
+    'زغللة': 'blurred vision',
+    'دوخة': 'dizziness vertigo',
+    'صداع': 'headache',
+    'حرقان بول': 'dysuria urinary tract infection',
+    'ضغط عالي': 'hypertension',
+    'ضغط واطي': 'hypotension',
+    'سكر عالي': 'hyperglycemia diabetes',
+    'قرحة': 'peptic ulcer',
+    'كتافلام': 'diclofenac potassium',
+    'فولتارين': 'diclofenac sodium',
+    'بروفين': 'ibuprofen',
+    'بنادول': 'paracetamol acetaminophen',
+    'باراسيتامول': 'paracetamol acetaminophen',
+    'سيتال': 'paracetamol acetaminophen pediatric',
+    'اوجمنتين': 'amoxicillin clavulanate',
+    'هاي بيوتك': 'amoxicillin clavulanate',
+    'امريزول': 'metronidazole',
+    'فلاجيل': 'metronidazole',
+    'انتينال': 'nifuroxazide',
+    'كونجستال': 'paracetamol pseudoephedrine chlorpheniramine',
+    'كومتركس': 'paracetamol pseudoephedrine chlorpheniramine',
+    'موتيليوم': 'domperidone',
+    'زوركال': 'pantoprazole',
+    'كونترولوك': 'pantoprazole',
+    'اوميز': 'omeprazole',
+    'جوسبرين': 'aspirin low dose',
+};
+
 async function extractEnglishKeywords(query, rawHistory = []) {
     const history = normalizeHistory(rawHistory).slice(-4);
     let contextSnippet = '';
@@ -190,14 +236,31 @@ async function extractEnglishKeywords(query, rawHistory = []) {
             history.map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content.substring(0, 150)}`).join('\n') + `\n`;
     }
 
-    const systemPrompt = `You are a medical search query specialist. Extract 1-4 canonical medical MeSH keywords and correct any typos from the clinical query for searching PubMed / Europe PMC.
-If the latest query is a follow-up (e.g., "what about tetracycline?", "what are the dosages?"), resolve coreferences using the recent conversation context so the search keywords accurately reflect the clinical topic (e.g., ["Helicobacter pylori", "tetracycline", "pediatric", "safety"]).
+    const systemPrompt = `You are a specialized bilingual medical search query specialist (Arabic/Egyptian Dialect & English).
+Your job is to extract 1-4 canonical medical MeSH keywords (in ENGLISH) and correct any typos from the clinical query for searching PubMed, Europe PMC, and clinical vector databases.
+
+CRITICAL INSTRUCTIONS FOR ARABIC & EGYPTIAN DIALECT:
+- Many queries come in Egyptian colloquial Arabic (عامية مصرية) or Modern Standard Arabic.
+- Deeply understand Egyptian colloquial medical complaints and brand names:
+  * "سخونية" / "حرارة" -> "fever"
+  * "ترجيع" / "استفراغ" -> "vomiting"
+  * "قشط" -> "infant regurgitation" / "GERD"
+  * "كرشة نفس" / "نهجان" -> "dyspnea"
+  * "مغص" -> "abdominal pain" / "colic"
+  * "كتافلام" / "فولتارين" -> "diclofenac"
+  * "اوجمنتين" / "هاي بيوتك" -> "amoxicillin clavulanate"
+  * "انتينال" -> "nifuroxazide" / "acute diarrhea"
+  * "امريزول" / "فلاجيل" -> "metronidazole"
+  * "سيتال" / "بنادول" -> "paracetamol" / "acetaminophen"
+  * "كونجستال" -> "pseudoephedrine paracetamol"
+- If the latest query is a follow-up (e.g., "طب وبالنسبة للجرعة؟", "ينفع للحامل؟", "what about metronidazole?"), resolve coreferences using the recent conversation context so the search keywords accurately reflect the primary clinical topic.
 
 Examples:
-- "latest treatment of h.pylori in childern uder 17" -> ["Helicobacter pylori", "treatment", "pediatric", "adolescent"]
-- Follow up: "what about tetracycline?" (when prior context was pediatric H. pylori) -> ["Helicobacter pylori", "tetracycline", "pediatric", "safety"]
-- "علاج التيفود المقاوم للمضادات الحيوية" -> ["typhoid fever", "antimicrobial resistance", "treatment"]
-- "criteria of septic shock only" -> ["septic shock", "diagnostic criteria", "consensus"]
+- "علاج الترجيع والسخونية في طفل سنتين" -> ["pediatric vomiting", "fever", "management", "pediatric"]
+- "ينفع كتافلام مع مريض قرحة معدة؟" -> ["diclofenac", "peptic ulcer disease", "contraindications"]
+- "جرعة اوجمنتين شرب لطفل 15 كيلو" -> ["amoxicillin clavulanate", "pediatric dosage", "otitis media"]
+- "latest treatment of h.pylori in childern uder 17" -> ["Helicobacter pylori", "treatment", "pediatric"]
+- Follow up: "طب وبديله ايه للحامل؟" (prior context: severe migraine) -> ["migraine", "pregnancy", "safe analgesics"]
 
 Output a pure JSON array of strings ONLY. No markdown, no conversational text.`;
 
@@ -210,11 +273,20 @@ Output a pure JSON array of strings ONLY. No markdown, no conversational text.`;
             return parsed.join(' ');
         }
     } catch (e) {
-        console.warn('[Keyword Extractor] Failed to parse JSON keywords, falling back to basic cleanup');
+        console.warn('[Keyword Extractor] Failed to parse JSON keywords, falling back to basic cleanup & Egyptian translation');
     }
-    // Basic fallback: remove common conversational filler
-    return query
-        .replace(/\b(latest|recent|treatment|manage|management|what is|how to|criteria of|guideline|guidelines|for|in|under|the|of|a|an)\b/gi, ' ')
+
+    // Egyptian & Arabic keyword mapping fallback
+    let fallbackQuery = query.toLowerCase();
+    for (const [arTerm, enTerm] of Object.entries(EGYPTIAN_MEDICAL_TERMS)) {
+        if (fallbackQuery.includes(arTerm)) {
+            fallbackQuery += ` ${enTerm}`;
+        }
+    }
+
+    // Basic fallback: remove common conversational filler in English & Arabic
+    return fallbackQuery
+        .replace(/\b(latest|recent|treatment|manage|management|what is|how to|criteria of|guideline|guidelines|for|in|under|the|of|a|an|يا دكتور|عايز اعرف|لو سمحت|ممكن|ايه هو|ايه هي|ينفع|ينفعش|ازاي)\b/gi, ' ')
         .replace(/[^\w\s.-]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
@@ -222,14 +294,18 @@ Output a pure JSON array of strings ONLY. No markdown, no conversational text.`;
 
 async function analyzeIntent(message) {
     const trimmed = message.trim();
-    if (trimmed.length < 25 && /^(hi|hello|hey|welcome|how are you|good morning|good evening|مرحبا|اهلا|السلام عليكم|صباح الخير|مساء الخير|شكرا|thank you|thanks)/i.test(trimmed)) {
+    // Fast regex pattern covering English & common Egyptian/Arabic greetings & pleasantries
+    if (
+        trimmed.length < 45 && 
+        /^(hi|hello|hey|welcome|how are you|good morning|good evening|مرحبا|اهلا|أهلا|السلام عليكم|سلام عليكم|ازيك|إزيك|عامل ايه|صباح الخير|مساء الخير|شكرا|شكراً|تسلم|تسلم ايدك|الله يخليك|يا غالي|تحياتي|thank you|thanks)(\s*(يا دكتور|يا دكتورة|دكتور|doctor|doc))?[\s.!,؟?]*$/i.test(trimmed)
+    ) {
         return 'CONVERSATIONAL';
     }
 
-    const systemPrompt = `You are a fast intent classifier for a clinical medical AI system.
+    const systemPrompt = `You are a fast intent classifier for a clinical medical AI system used by Arab and Egyptian healthcare professionals and patients.
 Classify the user message into either:
-- "CONVERSATIONAL": simple greetings, compliments, chit-chat, thanks, or questions about what you can do.
-- "CLINICAL": medical questions, disease queries, medications, symptoms, guidelines, differentials, lab interpretations, treatment protocols.
+- "CONVERSATIONAL": simple greetings (e.g. "سلام عليكم يا دكتور", "ازيك عامل ايه"), compliments ("شكرا جزيلا", "تسلم"), chit-chat, thanks, or general pleasantries.
+- "CLINICAL": any medical questions, symptoms in Egyptian Arabic or English (e.g. "ابني سخن وبيرجع", "جرعة الباراسيتامول", "treatment of sepsis"), medications, diseases, lab queries, dosages.
 
 Output ONLY ONE WORD: either CONVERSATIONAL or CLINICAL.`;
 

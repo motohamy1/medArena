@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { router, useNavigation, useScrollToTop } from 'expo-router';
 import { Colors } from '../../constants/Colors';
-import { ClinicalPearl, CLINICAL_PEARLS_POOL } from '../../constants/DailyPearlsData';
+import { ClinicalPearl } from '../../constants/DailyPearlsData';
 import { dbService } from '../../services/dbService';
 import { ScrollStack } from '../../components/ScrollStack/ScrollStack';
 import { MedicalUpdatesCarousel } from '../../components/MedicalUpdatesCarousel';
@@ -27,12 +27,17 @@ const STORAGE_DATE_KEY = '@med_arena_pearls_date';
 const STORAGE_REGEN_KEY = '@med_arena_pearls_regen_count';
 const STORAGE_OFFSET_KEY = '@med_arena_pearls_offset';
 const STORAGE_BOOKMARKS_KEY = '@med_arena_saved_pearls_list';
+// Stores full pearl objects so saved panel works offline and across DB/local sources
+const STORAGE_SAVED_OBJECTS_KEY = '@med_arena_saved_pearls_objects';
 const MAX_FREE_REGENS = 3;
 
 export default function PearlsTab() {
   const [pearls, setPearls] = useState<ClinicalPearl[]>([]);
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([]);
+  // Full objects of saved pearls — works with both Supabase and static-fallback IDs
+  const [savedPearlObjects, setSavedPearlObjects] = useState<ClinicalPearl[]>([]);
   const [savedFilter, setSavedFilter] = useState<string>('All');
+  const [specialtyFilter, setSpecialtyFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
   const [regensRemaining, setRegensRemaining] = useState(MAX_FREE_REGENS);
@@ -68,6 +73,14 @@ export default function PearlsTab() {
           } catch {}
         }
 
+        // Load full saved pearl objects for the Saved Pearls Deck section
+        const storedObjects = await AsyncStorage.getItem(STORAGE_SAVED_OBJECTS_KEY);
+        if (storedObjects) {
+          try {
+            setSavedPearlObjects(JSON.parse(storedObjects));
+          } catch {}
+        }
+
         let currentOffset = 0;
         let remaining = MAX_FREE_REGENS;
 
@@ -96,18 +109,32 @@ export default function PearlsTab() {
     loadData();
   }, []);
 
-  const toggleBookmark = async (pearlId: string) => {
+  const toggleBookmark = async (pearlId: string, pearlData?: ClinicalPearl) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
 
     const isBookmarked = bookmarkedIds.includes(pearlId);
-    const updated = isBookmarked
+    const updatedIds = isBookmarked
       ? bookmarkedIds.filter((id) => id !== pearlId)
       : [...bookmarkedIds, pearlId];
 
-    setBookmarkedIds(updated);
-    await AsyncStorage.setItem(STORAGE_BOOKMARKS_KEY, JSON.stringify(updated));
+    // Also maintain the full objects list
+    let updatedObjects: ClinicalPearl[];
+    if (isBookmarked) {
+      updatedObjects = savedPearlObjects.filter((p) => p.id !== pearlId);
+    } else if (pearlData) {
+      updatedObjects = [...savedPearlObjects, pearlData];
+    } else {
+      updatedObjects = savedPearlObjects;
+    }
+
+    setBookmarkedIds(updatedIds);
+    setSavedPearlObjects(updatedObjects);
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_BOOKMARKS_KEY, JSON.stringify(updatedIds)),
+      AsyncStorage.setItem(STORAGE_SAVED_OBJECTS_KEY, JSON.stringify(updatedObjects)),
+    ]);
   };
 
   const handleRegenerate = useCallback(async () => {
@@ -149,14 +176,35 @@ export default function PearlsTab() {
       setOffset(nextOffset);
       setRegensRemaining(nextRemaining);
 
-      const newPearls = await dbService.getDailyClinicalPearls(nextOffset, 5);
-      setPearls(newPearls);
+      const targetSpec = specialtyFilter !== 'all' ? specialtyFilter : undefined;
+      const freshPearls = await dbService.generateFreshClinicalPearls(targetSpec, 5);
+      if (freshPearls && freshPearls.length > 0) {
+        setPearls(freshPearls);
+      } else {
+        const newPearls = await dbService.getDailyClinicalPearls(nextOffset, 5, targetSpec);
+        setPearls(newPearls);
+      }
     } catch {
-      // Fallback
+      const fallback = await dbService.getDailyClinicalPearls(nextOffset, 5, specialtyFilter);
+      setPearls(fallback);
     } finally {
       setLoading(false);
     }
-  }, [offset, regensRemaining, spinAnim]);
+  }, [offset, regensRemaining, spinAnim, specialtyFilter]);
+
+  const handleSelectSpecialty = async (specId: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setSpecialtyFilter(specId);
+    setLoading(true);
+    try {
+      const data = await dbService.getDailyClinicalPearls(offset, 5, specId);
+      setPearls(data);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
@@ -173,10 +221,26 @@ export default function PearlsTab() {
     } as any);
   };
 
-  // Get full objects of bookmarked pearls
-  const savedPearlsList = CLINICAL_PEARLS_POOL.filter((p) =>
-    bookmarkedIds.includes(p.id)
-  );
+  // Dynamically derived specialties from whatever pearls exist in the database/pool
+  const dynamicSpecialtyChips = useMemo(() => {
+    const map = new Map<string, { id: string; label: string; icon: string; color: string }>();
+    map.set('all', { id: 'all', label: 'All Specialties', icon: 'apps', color: Colors.main });
+
+    for (const p of pearls) {
+      if (p.specialtyId && !map.has(p.specialtyId)) {
+        map.set(p.specialtyId, {
+          id: p.specialtyId,
+          label: p.specialtyName || p.specialtyId,
+          icon: p.specialtyIcon || 'medkit',
+          color: p.specialtyColor || Colors.main,
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [pearls]);
+
+  // Saved pearls from AsyncStorage — full objects, not resolved from static pool
+  const savedPearlsList = savedPearlObjects;
 
   // Available categories for bookmarks filter
   const availableCategories = [
@@ -253,6 +317,47 @@ export default function PearlsTab() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Dynamic Specialty Filter Pills (derived dynamically from database & live pool) */}
+        {dynamicSpecialtyChips.length > 2 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="px-5 mb-4"
+            contentContainerStyle={{ gap: 8, paddingRight: 20 }}
+          >
+            {dynamicSpecialtyChips.map((cat) => {
+              const isSelected = specialtyFilter === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => handleSelectSpecialty(cat.id)}
+                  activeOpacity={0.75}
+                  className={`flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border ${
+                    isSelected
+                      ? 'bg-main/20 border-main'
+                      : 'bg-white/[0.04] border-white/10'
+                  }`}
+                >
+                  <Ionicons
+                    name={cat.icon as any}
+                    size={12}
+                    color={isSelected ? Colors.main : '#9CA3AF'}
+                  />
+                  <Text
+                    className={`text-[12px] ${
+                      isSelected
+                        ? 'font-sans-bold text-main'
+                        : 'font-sans-medium text-gray-400'
+                    }`}
+                  >
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* Section 1: Solid Glassmorphism Swipe Stack Deck */}
         <View className="px-5 mb-2">
@@ -336,7 +441,7 @@ export default function PearlsTab() {
                         <TouchableOpacity
                           onPress={(e) => {
                             e.stopPropagation();
-                            toggleBookmark(item.id);
+                            toggleBookmark(item.id, item);
                           }}
                           activeOpacity={0.7}
                           style={styles.bookmarkButton}
@@ -631,7 +736,7 @@ export default function PearlsTab() {
 
                   <View style={styles.modalTopActions}>
                     <TouchableOpacity
-                      onPress={() => toggleBookmark(selectedPearl.id)}
+                      onPress={() => toggleBookmark(selectedPearl.id, selectedPearl)}
                       activeOpacity={0.7}
                       style={styles.modalActionButton}
                     >
@@ -716,7 +821,7 @@ export default function PearlsTab() {
                     {
                       borderLeftColor: Colors.main,
                       borderLeftWidth: 3.5,
-                      backgroundColor: 'rgba(222, 255, 249, 0.06)',
+                      backgroundColor: 'rgba(169, 228, 232, 0.06)',
                     },
                   ]}
                 >
@@ -741,7 +846,7 @@ export default function PearlsTab() {
                       {
                         borderLeftColor: Colors.pink,
                         borderLeftWidth: 3.5,
-                        backgroundColor: 'rgba(255, 195, 221, 0.08)',
+                        backgroundColor: 'rgba(249, 186, 201, 0.08)',
                       },
                     ]}
                   >

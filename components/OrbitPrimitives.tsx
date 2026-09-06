@@ -71,7 +71,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
           cx={center}
           cy={center}
           r={outerRadius}
-          stroke="#defff9"
+          stroke="#a9e4e8"
           strokeWidth={1}
           strokeOpacity={0.06}
           fill="none"
@@ -185,7 +185,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
         cx={center}
         cy={center}
         r={outerRadius}
-        stroke="#6dc2bd"
+        stroke="#4bc0b8"
         strokeWidth={1.4}
         strokeDasharray="6 20"
         strokeOpacity={0.45}
@@ -394,7 +394,7 @@ export const OrbitNode: React.FC<OrbitNodeProps> = ({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. ORBIT CENTER HUB
-// Medical AI: Dominant Primary focal point in Electric Lime / Mint (#defff9)
+// Medical AI: Dominant Primary focal point in Electric Lime / Mint (#a9e4e8)
 // Surgical AI: Sleek technical obsidian surface with precision dual-ring teal border
 // ─────────────────────────────────────────────────────────────────────────────
 interface OrbitCenterHubProps {
@@ -462,7 +462,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
       style={{
         width: size,
         height: size,
-        shadowColor: '#6dc2bd',
+        shadowColor: '#4bc0b8',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.35,
         shadowRadius: 10,
@@ -472,7 +472,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
     >
       {/* Outer Technical Dashed Ring */}
       <View
-        className="absolute rounded-full border border-[#6dc2bd]/40"
+        className="absolute rounded-full border border-[#4bc0b8]/40"
         style={{
           width: size + 6,
           height: size + 6,
@@ -481,16 +481,16 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
       />
 
       {/* 4 Precision Cardinal Reticle Ticks on Hub */}
-      <View className="absolute -top-1 w-2 h-[1.5px] bg-[#6dc2bd] rounded-full" />
-      <View className="absolute -bottom-1 w-2 h-[1.5px] bg-[#6dc2bd] rounded-full" />
-      <View className="absolute -left-1 h-2 w-[1.5px] bg-[#6dc2bd] rounded-full" />
-      <View className="absolute -right-1 h-2 w-[1.5px] bg-[#6dc2bd] rounded-full" />
+      <View className="absolute -top-1 w-2 h-[1.5px] bg-[#4bc0b8] rounded-full" />
+      <View className="absolute -bottom-1 w-2 h-[1.5px] bg-[#4bc0b8] rounded-full" />
+      <View className="absolute -left-1 h-2 w-[1.5px] bg-[#4bc0b8] rounded-full" />
+      <View className="absolute -right-1 h-2 w-[1.5px] bg-[#4bc0b8] rounded-full" />
 
       {/* Hub Core: Obsidian base with crisp surgical teal border */}
       <View
-        className="w-full h-full rounded-full items-center justify-center px-2 bg-[#080e11] border-2 border-[#6dc2bd]/80"
+        className="w-full h-full rounded-full items-center justify-center px-2 bg-[#080e11] border-2 border-[#4bc0b8]/80"
       >
-        <Ionicons name={icon} size={24} color="#6dc2bd" />
+        <Ionicons name={icon} size={24} color="#4bc0b8" />
         <Text
           className="text-[11.5px] font-sans-bold text-white text-center mt-1 leading-tight max-w-[85px]"
           allowFontScaling={false}
@@ -500,7 +500,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
         </Text>
         {subtitle ? (
           <Text
-            className="text-[9.5px] text-[#6dc2bd] font-mono font-bold uppercase tracking-wider text-center leading-tight mt-0.5"
+            className="text-[9.5px] text-[#4bc0b8] font-mono font-bold uppercase tracking-wider text-center leading-tight mt-0.5"
             allowFontScaling={false}
             style={{ textAlign: 'center', includeFontPadding: false }}
           >
@@ -538,7 +538,7 @@ export const OrbitSectionLabel: React.FC<OrbitSectionLabelProps> = ({
   const defaultBadgeLabel = isMedical ? 'MEDICAL' : 'SURGICAL';
   const defaultBadgeSubtitle = isMedical ? 'Clinical specialties' : 'Operative specialties';
   const iconName: keyof typeof Ionicons.glyphMap = isMedical ? 'medical' : 'cut';
-  const accentColor = isMedical ? '#defff9' : '#6dc2bd';
+  const accentColor = isMedical ? '#a9e4e8' : '#4bc0b8';
 
   if (isCompactBadgeOnly) {
     return (

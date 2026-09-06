@@ -122,8 +122,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           onPress={() => setActiveTab('surgery')}
           className="flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5"
           style={{
-            backgroundColor: activeTab === 'surgery' ? '#ffc3dd25' : 'transparent',
-            borderColor: activeTab === 'surgery' ? '#ffc3dd60' : 'transparent',
+            backgroundColor: activeTab === 'surgery' ? '#f9bac925' : 'transparent',
+            borderColor: activeTab === 'surgery' ? '#f9bac960' : 'transparent',
             borderWidth: 1,
           }}
           activeOpacity={0.7}
@@ -131,11 +131,11 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           <Ionicons
             name="cut"
             size={13}
-            color={activeTab === 'surgery' ? '#ffc3dd' : '#737373'}
+            color={activeTab === 'surgery' ? '#f9bac9' : '#737373'}
           />
           <Text
             className="text-[12px] font-sans-bold"
-            style={{ color: activeTab === 'surgery' ? '#ffc3dd' : '#9ca3af' }}
+            style={{ color: activeTab === 'surgery' ? '#f9bac9' : '#9ca3af' }}
           >
             Surgical Suite
           </Text>
@@ -145,8 +145,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           onPress={() => setActiveTab('medicine')}
           className="flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5"
           style={{
-            backgroundColor: activeTab === 'medicine' ? '#6dc2bd25' : 'transparent',
-            borderColor: activeTab === 'medicine' ? '#6dc2bd60' : 'transparent',
+            backgroundColor: activeTab === 'medicine' ? '#4bc0b825' : 'transparent',
+            borderColor: activeTab === 'medicine' ? '#4bc0b860' : 'transparent',
             borderWidth: 1,
           }}
           activeOpacity={0.7}
@@ -154,11 +154,11 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           <Ionicons
             name="medical"
             size={13}
-            color={activeTab === 'medicine' ? '#6dc2bd' : '#737373'}
+            color={activeTab === 'medicine' ? '#4bc0b8' : '#737373'}
           />
           <Text
             className="text-[12px] font-sans-bold"
-            style={{ color: activeTab === 'medicine' ? '#6dc2bd' : '#9ca3af' }}
+            style={{ color: activeTab === 'medicine' ? '#4bc0b8' : '#9ca3af' }}
           >
             Medicine
           </Text>
@@ -170,8 +170,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3 px-0.5">
             <View className="flex-row items-center gap-2">
-              <View className="w-6 h-6 rounded-lg bg-[#ffc3dd]20 items-center justify-center border border-[#ffc3dd]40">
-                <Ionicons name="cut" size={12} color="#ffc3dd" />
+              <View className="w-6 h-6 rounded-lg bg-[#f9bac9]20 items-center justify-center border border-[#f9bac9]40">
+                <Ionicons name="cut" size={12} color="#f9bac9" />
               </View>
               <Text className="text-[15px] font-sans-bold text-white">
                 Surgical Suite & Operative Medicine
@@ -300,8 +300,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3 px-0.5">
             <View className="flex-row items-center gap-2">
-              <View className="w-6 h-6 rounded-lg bg-[#6dc2bd]20 items-center justify-center border border-[#6dc2bd]40">
-                <Ionicons name="fitness" size={12} color="#6dc2bd" />
+              <View className="w-6 h-6 rounded-lg bg-[#4bc0b8]20 items-center justify-center border border-[#4bc0b8]40">
+                <Ionicons name="fitness" size={12} color="#4bc0b8" />
               </View>
               <Text className="text-[15px] font-sans-bold text-white">
                 More Medical Specialties

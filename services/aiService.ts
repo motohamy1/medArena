@@ -18,48 +18,43 @@ export type Citation = {
   url: string;
 };
 
-const CLINICAL_SYSTEM_PROMPT = `You are Medical Arena AI, a board-certified clinical decision support assistant designed exclusively for physicians, surgeons, and medical practitioners.
-Your core mission is to synthesize clinical evidence into actionable, high-yield guidance while strictly maintaining cross-turn patient context and pharmacovigilance.
+const CLINICAL_SYSTEM_PROMPT = `You are Medical Arena AI, a board-certified clinical decision support assistant designed exclusively for physicians, surgeons, and healthcare practitioners.
+Your core mission is to synthesize verified clinical evidence into actionable, high-yield guidance while strictly maintaining cross-turn patient context, demographic continuity, and dynamic formatting.
 
-### 1. SESSION CONTINUITY & DEMOGRAPHIC PRESERVATION:
-- **Preserve Established Context**: When the user asks a follow-up question (e.g. asking about a drug, dosage, or test like "what about tetracycline?"), you MUST interpret it strictly within the active clinical topic and patient demographic established in previous messages (e.g. pediatric age 10-18y H. pylori eradication).
-- Never reset to generic adult or disconnected definitions unless the user explicitly introduces a completely new case or patient.
+### 1. DYNAMIC PRESENTATION & NATURAL STRUCTURE:
+- **MATCH RESPONSE STRUCTURE TO QUESTION COMPLEXITY**:
+  * **Short / Direct / Factual queries** (e.g., "What's the pediatric dose of paracetamol?", "Is ciprofloxacin safe in pregnancy?", "What is the target blood pressure in CKD?"):
+    Deliver a concise, direct, high-impact clinical response in 1-2 paragraphs or bullet points. DO NOT force artificial section headers like "CLINICAL ASSESSMENT" or "MANAGEMENT PROTOCOL".
+  * **Complex / Multi-phase Clinical Protocols** (e.g., "Full management of severe DKA in adolescents", "Differential diagnosis and workup of acute chest pain"):
+    Organize the response into 2-3 logical, content-specific sections using:
+    ##SECTION: CONTEXT_SPECIFIC_HEADING##
+    (Examples: ##SECTION: INITIAL STABILIZATION##, ##SECTION: WEIGHT-BASED INSULIN INFUSION##, ##SECTION: ELECTROLYTE MONITORING##).
+  * **Follow-up / Clarification questions** (e.g., "What if potassium is 3.1?", "طب وبديله ايه للحامل؟"):
+    Answer directly and conversationally referencing the prior patient context without unnecessary section headers.
 
-### 2. CLINICAL EVIDENCE GROUNDING & PEDIATRIC PHARMACOVIGILANCE:
-- Base all recommendations, drug regimens, weight/age-adjusted dosages, and diagnostic criteria on established international clinical guidelines (e.g., ESPGHAN/NASPGHAN, AAP, IDSA, Maastricht VI).
-- **Pediatric Age Restrictions & Contraindications**: Whenever discussing drugs with pediatric age cutoffs (e.g., Tetracyclines contraindicated in children <8 years due to tooth discoloration and enamel hypoplasia; Fluoroquinolones limitations; Aspirin Reye's syndrome risk), explicitly state the age constraints, weight thresholds, and safe alternative protocols.
-- **Pediatric H. pylori Protocols**:
-  * First-line (ESPGHAN/NASPGHAN): 14-day high-dose Amoxicillin + Clarithromycin (if clarithromycin resistance <15%) OR Amoxicillin + Metronidazole.
-  * Rescue / Bismuth Quadruple: In children ≥8 years or adolescents (depending on regional guidelines / weight >40kg), Tetracycline/Metronidazole/Bismuth/PPI may be considered; in children <8 years, Tetracycline is strictly avoided.
-- Deliver direct, high-confidence clinical answers without generic boilerplate or robotic meta-disclaimers.
+### 2. ARABIC & EGYPTIAN DIALECT INTELLIGENCE:
+- **Language Matching**: If the user asks in Arabic or colloquial Egyptian (العامية المصرية), respond in clear, professional medical Arabic that naturally aligns with their tone.
+- **Terminology**: Use standard medical Arabic for clinical rationale while keeping drug names, brand/generic pairings, laboratory units, and scores in English or parenthesized English (e.g., "باراسيتامول (Paracetamol)", "أوجمنتين (Amoxicillin-Clavulanate)").
+- **Cultural & Clinical Nuance**: Deeply understand Egyptian colloquial medical complaints (e.g., "سخونية", "مغص كلوي", "نهجان", "ترجيع", "كرشة نفس", "كتافلام", "انتينال") and provide precise clinical guidance.
+
+### 3. SESSION CONTINUITY & DEMOGRAPHIC PRESERVATION:
+- **Preserve Established Context**: When the user asks a follow-up question, interpret it strictly within the active clinical topic and patient demographic established in previous messages (e.g. pediatric age 10-18y H. pylori eradication).
+- Never reset to generic adult cases unless the user explicitly introduces a completely new patient.
+- **Pediatric Safety**: Explicitly state age and weight cutoffs (e.g., Tetracycline contraindicated <8y, Aspirin contraindicated in viral febrile illness, Fluoroquinolones pediatric restrictions).
+
+### 4. EVIDENCE GROUNDING & CITATIONS:
+- Base all recommendations on established international clinical guidelines (e.g., WHO, AAP, ESPGHAN/NASPGHAN, NICE, IDSA, UpToDate).
+- Deliver direct, high-confidence clinical answers without generic boilerplate or robotic disclaimers.
 - Use bracketed citations [1], [2] referencing the source in the provided context where applicable.
 
-### 3. INTELLIGENT INTENT-FIRST ARCHITECTURE (ZERO GENERIC FLUFF):
-- Deeply analyze what the user is asking. Deliver the EXACT clinical answer first with zero introductory filler.
-- **Dynamic Hero Card Selection**:
-  * **Treatment / Management query**: -> Card 1: ##SECTION: MANAGEMENT PROTOCOL## -> Card 2: ##SECTION: FIRST-LINE PHARMACOTHERAPY##
-  * **Pediatric / Drug safety query**: -> Card 1: ##SECTION: PEDIATRIC SAFETY & CONTRAINDICATIONS## -> Card 2: ##SECTION: RECOMMENDED REGIMEN & DOSING##
-  * **Criteria / Definition query**: -> Card 1: ##SECTION: DIAGNOSTIC CRITERIA & SCORING##
-  * **Acute Emergency / Field Scenario**: -> Card 1: ##SECTION: EMERGENCY PROTOCOL & IMMEDIATE ACTION##
-  * **Diagnostic Workup / Lab / Imaging query**: -> Card 1: ##SECTION: INVESTIGATIONS / WORKUP##
-- Always include ##SECTION: CLINICAL PEARLS & PITFALLS## highlighting common pitfalls or resistance patterns.
-
-### 4. KNOWLEDGE DISTILLATION (ACTIVE LEARNING):
-- If the "KNOWLEDGE RESOURCES" (e.g., Europe PMC) provide a new standard of care, specific dosage, or landmark trial results NOT present in the primary "DATABASE CONTEXT", you MUST include a hidden block at the very end:
-  ##KNOWLEDGE_UPDATE##
-  [Topic Name]: [Summary of the new information to be added to the permanent database]
-  [Reference]: [Full citation string]
-  ##END_UPDATE##
-
-### 5. FORMATTING & THEMED SECTION HEADERS:
-- You MUST wrap every distinct card in a themed section header: ##SECTION: HEADING_NAME##
-- **No Markdown Tables**: Never use markdown tables (| or ---). Use bullet points:
+### 5. FORMATTING RULES:
+- **No Markdown Tables**: Never use markdown tables (| or ---). Use clean bullet points:
   - **Drug Name**: Dosage | Route | Frequency | Duration/Notes
-- **Language**: Match user query language, but keep drug names, scores, and medical terms in English.
-- **No Internal Thinking**: DO NOT include thinking tags or reasoning chains. Output only the structured sections.
-
-### 6. SUGGESTIONS:
-At the very end, provide ##SUGGESTIONS## with 2-3 focused clinical follow-up prompts tailored to the ongoing case.`;
+- **No Internal Thinking**: DO NOT include thinking tags or reasoning chains. Output only the clinical response.
+- At the very end, provide 2-3 focused clinical follow-up prompts using:
+  ##SUGGESTIONS##
+  - [Follow-up prompt 1]
+  - [Follow-up prompt 2]`;
 
 /**
  * Robust extraction for Suggestions and thinking/reasoning removal
@@ -263,7 +258,7 @@ export const aiService = {
     topicId?: string,
     categoryContext?: string,
     history: { text: string; isUser: boolean }[] = []
-  ): Promise<{ reply: string; citations?: Citation[]; suggestions?: string[] }> {
+  ): Promise<{ reply: string; citations?: Citation[]; suggestions?: string[]; sourceType?: string }> {
     // Convert history for APIs
     const groqHistory = history.map(h => ({
       role: h.isUser ? 'user' : 'assistant' as 'user' | 'assistant',
@@ -295,6 +290,7 @@ export const aiService = {
           reply: data.reply || "I'm sorry, I received an empty response. Please try again.",
           citations: data.citations || [],
           suggestions: data.suggestions || [],
+          sourceType: data.sourceType || 'general_synthesis',
         };
       }
     } catch {
@@ -337,4 +333,209 @@ export const aiService = {
     // 4. Fallback to Offline Local Knowledge Base
     return getOfflineFallbackReply(message);
   },
+
+  /**
+   * Dynamically synthesizes high-yield, verified Clinical Pearls & Tips & Tricks
+   * via Groq or Gemini, with seamless fallback to the bundled Knowledge Base Miner.
+   */
+  async generateClinicalPearls(
+    specialtyId?: string,
+    count: number = 3
+  ): Promise<import('../constants/DailyPearlsData').ClinicalPearl[]> {
+    return generateDynamicPearls(specialtyId, count);
+  },
 };
+
+function parsePearlsJSON(raw: string): import('../constants/DailyPearlsData').ClinicalPearl[] | null {
+  try {
+    let clean = raw.trim();
+    if (clean.startsWith('```')) {
+      clean = clean.replace(/^```(?:json)?\n?/, '').replace(/```$/, '').trim();
+    }
+    const arr = JSON.parse(clean);
+    if (!Array.isArray(arr)) return null;
+
+    return arr
+      .map((item: any, idx: number) => {
+        const specId = String(item.specialtyId || 'general').toLowerCase().replace(/\s+/g, '_').trim();
+        return {
+          id: item.id || `pearl_dyn_${Date.now()}_${idx}`,
+          title: String(item.title || 'Clinical Pearl'),
+          category: String(item.category || 'Clinical Protocol'),
+          specialtyId: specId,
+          specialtyName: String(item.specialtyName || (specId.charAt(0).toUpperCase() + specId.slice(1))),
+          specialtyColor: String(item.specialtyColor || '#3B82F6'),
+          specialtyIcon: String(item.specialtyIcon || 'medkit'),
+          badge: String(item.badge || 'Key Threshold'),
+          rule: String(item.rule || ''),
+          action: String(item.action || ''),
+          pitfall: String(item.pitfall || ''),
+          citation: String(item.citation || 'Clinical Practice Guidelines'),
+        };
+      })
+      .filter((p) => p.title && (p.rule || p.action));
+  } catch (e) {
+    console.warn('[parsePearlsJSON] Failed to parse JSON:', e);
+    return null;
+  }
+}
+
+async function callGroqForPearls(prompt: string): Promise<import('../constants/DailyPearlsData').ClinicalPearl[] | null> {
+  if (!GROQ_KEY) return null;
+  const models = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'qwen/qwen3.6-27b'];
+
+  for (const model of models) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${GROQ_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a Senior Medical Professor and Board Examination Author. Output ONLY a valid JSON array of objects. Do not include markdown backticks or commentary.',
+            },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.3,
+          max_tokens: 2800,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.choices?.[0]?.message?.content?.trim();
+        if (text) {
+          const parsed = parsePearlsJSON(text);
+          if (parsed && parsed.length > 0) return parsed;
+        }
+      }
+    } catch {}
+  }
+  return null;
+}
+
+async function callGeminiForPearls(prompt: string): Promise<import('../constants/DailyPearlsData').ClinicalPearl[] | null> {
+  if (!GEMINI_KEY) return null;
+  try {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(GEMINI_KEY);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: {
+        temperature: 0.3,
+        responseMimeType: 'application/json',
+      },
+    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    return parsePearlsJSON(text);
+  } catch (err) {
+    console.warn('[Direct Gemini Pearls]', err);
+    return null;
+  }
+}
+
+async function fetchUpToDateRAGContext(specialtyId?: string): Promise<string> {
+  let context = '';
+  const currentYear = new Date().getFullYear();
+  const domain = specialtyId && specialtyId !== 'all' ? specialtyId : 'clinical practice guidelines';
+
+  // 1. Live Europe PMC / PubMed Practice Guidelines (2023 - present)
+  try {
+    const query = `(${domain}) AND (PUB_TYPE:"Practice Guideline" OR PUB_TYPE:"Consensus Development Conference") AND (PUB_YEAR:[2023 TO ${currentYear}])`;
+    const res = await fetch(
+      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(query)}&format=json&resultType=core&pageSize=3&sort=P_PDATE_D%20desc`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const results = data.resultList?.result || [];
+      for (const r of results) {
+        if (r.title && r.abstractText) {
+          const clean = r.abstractText.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 500);
+          context += `\n[LATEST GUIDELINE (${r.pubYear || '2024'}) - ${r.journalTitle || 'Medical Journal'}]:\nTitle: ${r.title}\nKey Findings: ${clean}\nCitation: ${r.journalTitle || 'Guideline Consensus'} (${r.pubYear || '2024'})\n`;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[RAG] Europe PMC query skipped:', e);
+  }
+
+  // 2. Fetch verified clinical protocol excerpts from local knowledge/Supabase
+  try {
+    const { supabase } = await import('../lib/supabase');
+    let q = supabase.from('specialty_topics').select('title, subtitle, clinical_content');
+    if (specialtyId && specialtyId !== 'all') {
+      q = q.eq('specialty_id', specialtyId);
+    }
+    const { data } = await q.limit(2);
+    if (data && data.length > 0) {
+      for (const t of data) {
+        const pitfall = t.clinical_content?.find((c: any) => c.title?.toLowerCase().includes('pitfall'))?.content;
+        const dosing = t.clinical_content?.find((c: any) => c.title?.toLowerCase().includes('dosing') || c.title?.toLowerCase().includes('pharmacotherapy'))?.content;
+        context += `\n[VERIFIED DATABASE PROTOCOL: ${t.title}]:\nSubtitle: ${t.subtitle}\nDosing: ${dosing?.slice(0, 250) || 'N/A'}\nPitfall: ${pitfall?.slice(0, 250) || 'N/A'}\n`;
+      }
+    }
+  } catch (e) {
+    console.warn('[RAG] Supabase topic context skipped:', e);
+  }
+
+  return context;
+}
+
+export async function generateDynamicPearls(
+  specialtyId?: string,
+  count: number = 3
+): Promise<import('../constants/DailyPearlsData').ClinicalPearl[]> {
+  // Fetch up-to-date RAG evidence from PubMed / Europe PMC & database
+  const ragContext = await fetchUpToDateRAGContext(specialtyId);
+
+  const prompt = `You are a Senior Board Examination Author and Master Clinician.
+Generate ${count} authentic, life-saving Clinical Pearls & Tips & Tricks for physicians.
+${specialtyId && specialtyId !== 'all' ? `Generate pearls specifically for the medical specialty: "${specialtyId}".` : 'Select any high-yield clinical specialties or subspecialties dynamically (e.g. Critical Care, Cardiology, Toxicology, Nephrology, Neurology, Pulmonology, Pediatrics, Hematology, Rheumatology, OB/GYN, Surgery, etc.).'}
+
+${ragContext ? `### LATEST RETRIEVED RAG EVIDENCE & RECENT GUIDELINES (2023-2026):\n${ragContext}\nStrictly ground your pearls, exact dosages, cutoffs, and citations in this retrieved evidence where applicable.\n` : ''}
+
+Requirements for each pearl:
+- Must be a true, actionable clinical pearl, drug interaction, physiological principle, or catastrophic pitfall to avoid.
+- Choose a relevant specialtyId (short lowercase slug), specialtyName, a matching hex specialtyColor, and an Ionicons icon name (e.g. heart, pulse, flash, flame, medkit, warning, water, fitness, eye, bandage, shield).
+- Provide an exact badge (key number, cutoff, or ratio).
+- Provide exact rule, stepwise action (with drug doses/timing), and pitfall.
+- Provide a genuine guideline citation with publication year (e.g. 2023-2026).
+
+Return ONLY a valid JSON array of objects with NO markdown formatting:
+[
+  {
+    "id": "pearl_${Date.now()}_1",
+    "title": "Short title (max 5 words)",
+    "category": "Sub-domain or clinical syndrome",
+    "specialtyId": "slug_id",
+    "specialtyName": "Full Specialty Name",
+    "specialtyColor": "#HexColor",
+    "specialtyIcon": "ionicons_name",
+    "badge": "Key metric or cutoff",
+    "rule": "Exact pathophysiological mechanism or core clinical rule (1-2 sentences).",
+    "action": "Immediate exact stepwise action the clinician must take (dosages, route, timing).",
+    "pitfall": "Critical malpractice trap or common lethal mistake to avoid.",
+    "citation": "Official guideline citation (e.g., AHA/ACC 2024, KDIGO 2023, GINA 2024, IDSA 2024, Surviving Sepsis)"
+  }
+]`;
+
+  // 1. Try Groq (Fastest)
+  const groqPearls = await callGroqForPearls(prompt);
+  if (groqPearls && groqPearls.length > 0) return groqPearls;
+
+  // 2. Try Gemini
+  const geminiPearls = await callGeminiForPearls(prompt);
+  if (geminiPearls && geminiPearls.length > 0) return geminiPearls;
+
+  // 3. Fallback to bundled Knowledge Base Miner
+  const { pearlMinerService } = await import('./pearlMinerService');
+  return pearlMinerService.getMinedPearls(specialtyId, count);
+}
+
