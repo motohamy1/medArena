@@ -6,6 +6,7 @@ import {
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -32,6 +33,10 @@ import { KnowledgeMap } from "./KnowledgeMap";
 import { useKeyboardLift } from "../hooks/useKeyboardLift";
 
 const EASE_HEAVY = Easing.bezier(0.32, 0.72, 0, 1);
+
+// Auto-growing composer: 1 line -> up to ~5 lines, then it scrolls internally.
+const MIN_INPUT_HEIGHT = 28;
+const MAX_INPUT_HEIGHT = 120;
 
 type Message = {
   id: string;
@@ -530,6 +535,7 @@ export default function TopicChat({
 }: TopicChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
+  const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
   const [isTyping, setIsTyping] = useState(false);
   const {
     keyboardHeight,
@@ -539,6 +545,12 @@ export default function TopicChat({
   } = useKeyboardLift();
   const flatListRef = useRef<FlatList>(null);
   const lastSentQueryRef = useRef<string | null>(null);
+
+  // Composer text + height stay in sync (clearing collapses it back to one line)
+  const updateComposerText = (t: string) => {
+    setInputText(t);
+    if (!t) setInputHeight(MIN_INPUT_HEIGHT);
+  };
 
   // Jump arrow scroll tracking
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -602,7 +614,7 @@ export default function TopicChat({
   const handleTextSend = async (queryOverride?: string) => {
     const query = (queryOverride || inputText).trim();
     if (!query) return;
-    if (!queryOverride) setInputText("");
+    if (!queryOverride) updateComposerText("");
     setIsTyping(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -827,7 +839,10 @@ export default function TopicChat({
         {/* Input Bar - lifts above keyboard using real keyboard height */}
         <RNAnimated.View
           className="px-4 pt-2.5 pb-4 border-t border-white/5 bg-background flex-row items-center gap-2"
-          style={{ marginBottom: keyboardHeightAnim }}
+          style={{
+            marginBottom: keyboardHeightAnim,
+            alignItems: inputHeight > MIN_INPUT_HEIGHT ? "flex-end" : "center",
+          }}
         >
           <View
             className="flex-1 flex-row items-center bg-[#0e1416] border border-white/10 rounded-2xl px-4 py-2.5"
@@ -842,17 +857,25 @@ export default function TopicChat({
           >
             <TextInput
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={updateComposerText}
               placeholder={`Ask about ${topicName}...`}
               placeholderTextColor="#6b7280"
               className="flex-1 text-white text-[15px] font-sans py-1 leading-5"
+              style={{ minHeight: MIN_INPUT_HEIGHT, maxHeight: MAX_INPUT_HEIGHT }}
               returnKeyType="send"
               onSubmitEditing={() => handleTextSend()}
               editable={!isTyping}
               multiline
-              submitBehavior="newline"
-              textAlignVertical="top"
-              style={{ maxHeight: 120 }}
+              scrollEnabled={inputHeight >= MAX_INPUT_HEIGHT}
+              textAlignVertical={Platform.OS === "android" ? "top" : "auto"}
+              onContentSizeChange={(e) =>
+                setInputHeight(
+                  Math.max(
+                    MIN_INPUT_HEIGHT,
+                    Math.min(MAX_INPUT_HEIGHT, e.nativeEvent.contentSize.height),
+                  ),
+                )
+              }
             />
           </View>
           <TouchableOpacity
