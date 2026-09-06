@@ -6,6 +6,7 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   Alert,
+  AppState,
   FlatList,
   Keyboard,
   Animated as RNAnimated,
@@ -48,6 +49,14 @@ const EASE_HEAVY = Easing.bezier(0.32, 0.72, 0, 1);
 const MOTION = { enter: 250, stagger: 60 } as const;
 
 const TURQUOISE = Colors.accent;
+
+// Auto-growing composer: 1 line -> up to ~5 lines, then it scrolls internally.
+const MIN_INPUT_HEIGHT = 28;
+const MAX_INPUT_HEIGHT = 120;
+
+// Frontier-style lifecycle: resuming the app after this much idle time
+// drops the current thread into history and opens a fresh chat.
+const NEW_CHAT_AFTER_IDLE_MS = 2 * 60 * 1000;
 
 // Medical section config for structured AI rendering — harmonized with 4 main colors
 const SECTION_CONFIG: Record<
@@ -659,6 +668,7 @@ const ChatTab = () => {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
+  const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
   const [isTyping, setIsTyping] = useState(false);
   const [presetBatches] = useState<QuickPrompt[][]>(() => getDailyPromptBatches());
   const [batchIndex, setBatchIndex] = useState(0);
@@ -667,40 +677,49 @@ const ChatTab = () => {
   const isHandlingAutoSend = useRef(false);
   const lastProcessedQuery = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
+  const lastActiveAtRef = useRef(0);
 
   // Keep ref in sync
   useEffect(() => {
     activeSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
-  // Load saved sessions on mount
+  // Composer text + height stay in sync (clearing collapses it back to one line)
+  const updateComposerText = (t: string) => {
+    setInputText(t);
+    if (!t) setInputHeight(MIN_INPUT_HEIGHT);
+  };
+
+  // Cold start behaves like frontier AI apps: always open a fresh, unsaved
+  // chat. Previous conversations are auto-saved and stay in Consultation
+  // History — no need to press the new-chat icon to archive the last thread.
   useEffect(() => {
     async function initSessions() {
       const all = await chatStorageService.getAllSessions();
       setSessions(all);
-
-      const activeId = await chatStorageService.getActiveSessionId();
-      if (activeId) {
-        const found = all.find((s) => s.id === activeId);
-        if (found) {
-          setCurrentSessionId(found.id);
-          setMessages(found.messages);
-          return;
-        }
-      }
-
-      if (all.length > 0) {
-        setCurrentSessionId(all[0].id);
-        setMessages(all[0].messages);
-      } else {
-        // Create initial session
-        const newSess = await chatStorageService.createNewSession();
-        setCurrentSessionId(newSess.id);
-        setMessages([]);
-        setSessions([newSess]);
-      }
+      setCurrentSessionId(null);
+      setMessages([]);
     }
     initSessions();
+  }, []);
+
+  // Warm start: if the app was backgrounded past the idle window, the current
+  // thread is considered done — roll into history and start a new chat.
+  useEffect(() => {
+    lastActiveAtRef.current = Date.now();
+    const sub = AppState.addEventListener("change", (status) => {
+      if (status === "active") {
+        const idleMs = Date.now() - lastActiveAtRef.current;
+        if (idleMs >= NEW_CHAT_AFTER_IDLE_MS) {
+          setCurrentSessionId(null);
+          setMessages([]);
+          updateComposerText("");
+        }
+      } else {
+        lastActiveAtRef.current = Date.now();
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   // Load medical context if specialtyId and topicId are provided in route params
@@ -754,11 +773,12 @@ const ChatTab = () => {
   // Auto-save session messages
   const persistCurrentMessages = async (updatedMsgs: ChatMessage[]) => {
     let sessId = activeSessionIdRef.current;
+    const topicName = params.topicName || contextTopic?.title;
     if (!sessId) {
       const created = await chatStorageService.createNewSession({
         specialtyId: params.specialtyId,
         topicId: params.topicId,
-        topicName: params.topicName || contextTopic?.title,
+        topicName,
       });
       sessId = created.id;
       setCurrentSessionId(created.id);
@@ -766,13 +786,15 @@ const ChatTab = () => {
 
     const sessionObj: ChatSession = {
       id: sessId,
-      title: 'Clinical Inquiry',
+      // 'New Clinical Inquiry' is the sentinel that chatStorageService
+      // replaces with a title derived from the first user message.
+      title: topicName ? `${topicName} Session` : 'New Clinical Inquiry',
       messages: updatedMsgs,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       specialtyId: params.specialtyId,
       topicId: params.topicId,
-      topicName: params.topicName || contextTopic?.title,
+      topicName,
     };
 
     await chatStorageService.saveSession(sessionObj);
@@ -780,20 +802,14 @@ const ChatTab = () => {
     setSessions(refreshed);
   };
 
-  // Start New Chat Handler (Pen icon)
-  const handleStartNewChat = async () => {
+  // Start New Chat Handler (Pen icon) — the session is only persisted once
+  // the first message is sent, so empty chats never litter the history.
+  const handleStartNewChat = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const newSession = await chatStorageService.createNewSession({
-      specialtyId: params.specialtyId,
-      topicId: params.topicId,
-      topicName: params.topicName || contextTopic?.title,
-    });
-    setCurrentSessionId(newSession.id);
+    setCurrentSessionId(null);
     setMessages([]);
-    setInputText("");
+    updateComposerText("");
     setIsHistoryModalVisible(false);
-    const refreshed = await chatStorageService.getAllSessions();
-    setSessions(refreshed);
   };
 
   // Switch to a past session
@@ -815,10 +831,8 @@ const ChatTab = () => {
         setCurrentSessionId(remaining[0].id);
         setMessages(remaining[0].messages);
       } else {
-        const fresh = await chatStorageService.createNewSession();
-        setCurrentSessionId(fresh.id);
+        setCurrentSessionId(null);
         setMessages([]);
-        setSessions([fresh]);
       }
     }
   };
@@ -867,7 +881,7 @@ const ChatTab = () => {
     const textToSend = (queryText || inputText).trim();
     if (!textToSend || isTyping) return;
 
-    if (!queryText) setInputText("");
+    if (!queryText) updateComposerText("");
     setIsTyping(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -928,7 +942,7 @@ const ChatTab = () => {
   useEffect(() => {
     if (params.query && params.query !== lastProcessedQuery.current) {
       lastProcessedQuery.current = params.query;
-      setInputText(params.query);
+      updateComposerText(params.query);
       if (params.autoSend === "true" && !isHandlingAutoSend.current) {
         isHandlingAutoSend.current = true;
         handleSend(params.query);
@@ -1166,6 +1180,7 @@ const ChatTab = () => {
               className="flex-row items-center bg-[#0c1017] border border-white/10 rounded-2xl px-4 py-2.5"
               style={{
                 minHeight: 52,
+                alignItems: inputHeight > MIN_INPUT_HEIGHT ? "flex-end" : "center",
                 shadowColor: "#000",
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.25,
@@ -1175,14 +1190,25 @@ const ChatTab = () => {
             >
               <TextInput
                 value={inputText}
-                onChangeText={setInputText}
+                onChangeText={updateComposerText}
                 placeholder="Ask about guidelines, dosages, criteria..."
                 placeholderTextColor="#6b7280"
                 className="flex-1 text-white text-[15px] font-sans py-1 leading-5"
+                style={{ minHeight: MIN_INPUT_HEIGHT, maxHeight: MAX_INPUT_HEIGHT }}
                 returnKeyType="send"
                 onSubmitEditing={() => handleSend()}
                 editable={!isTyping}
-                multiline={false}
+                multiline
+                scrollEnabled={inputHeight >= MAX_INPUT_HEIGHT}
+                textAlignVertical={Platform.OS === "android" ? "top" : "auto"}
+                onContentSizeChange={(e) =>
+                  setInputHeight(
+                    Math.max(
+                      MIN_INPUT_HEIGHT,
+                      Math.min(MAX_INPUT_HEIGHT, e.nativeEvent.contentSize.height),
+                    ),
+                  )
+                }
               />
               <TouchableOpacity
                 onPress={() => handleSend()}
