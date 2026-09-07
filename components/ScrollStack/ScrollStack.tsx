@@ -59,6 +59,10 @@ export const ScrollStack: React.FC<ScrollStackProps> = ({
   const progress = useSharedValue(0);
   const startProgress = useSharedValue(0);
 
+  if (totalCards === 0) {
+    return null;
+  }
+
   const handleIndexChange = useCallback(
     (newIndex: number) => {
       setActiveIndex(newIndex);

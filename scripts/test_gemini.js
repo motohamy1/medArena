@@ -57,7 +57,7 @@ async function testModel(modelName) {
 
 async function run() {
     // Test 1: The model currently used in the app
-    const currentModel = "gemini-flash-latest";
+    const currentModel = "gemini-3.5-flash";
     const currentInfo = await testModel(currentModel);
 
     if (currentInfo) {
@@ -66,7 +66,7 @@ async function run() {
         console.log("\n⚠️ The current model configuration appears INVALID.");
 
         // Test 2: The recommended fallback
-        const fallbackModel = "gemini-1.5-flash";
+        const fallbackModel = "gemini-3.6-flash";
         console.log(`Trying fallback model: "${fallbackModel}"...`);
         const fallbackInfo = await testModel(fallbackModel);
 

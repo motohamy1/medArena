@@ -8,9 +8,9 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const aiModel = genAI ? genAI.getGenerativeModel({ 
-    model: 'gemini-1.5-flash',
+    model: 'gemini-3.5-flash',
     generationConfig: {
-        temperature: 0.2,
+        // temperature/top_p/top_k are deprecated in Gemini 3.x
         maxOutputTokens: 4096,
     }
 }) : null;
@@ -56,10 +56,8 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
     // 1. Try Groq (Ultra-fast inference: 300+ tokens/sec, highly reliable models)
     if (GROQ_API_KEY) {
         const groqModels = [
-            "llama-3.3-70b-versatile",
-            "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768",
-            "gemma2-9b-it",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
             "qwen/qwen3.6-27b"
         ];
         const groqMessages = [

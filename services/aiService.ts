@@ -7,6 +7,15 @@ const BACKEND_URL =
 const GEMINI_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
 
+// A dev-machine backend (localhost/LAN IP over cleartext http) is unreachable
+// from a release build: mobile data can't route 192.168.x.x and Android blocks
+// cleartext in release. Trying it anyway stalls every message for ~10s, so in
+// production we only attempt the backend when it's a real public HTTPS URL.
+const PRIVATE_HOST =
+  /localhost|127\.0\.0\.1|10\.0\.2\.2|\b192\.168\.|\b172\.(1[6-9]|2\d|3[01])\.|\[::1\]/i;
+const USE_BACKEND =
+  __DEV__ || (!PRIVATE_HOST.test(BACKEND_URL) && BACKEND_URL.startsWith('https://'));
+
 export type DoctorCategory = 'physicians';
 
 export type Citation = {
@@ -100,7 +109,7 @@ function cleanAIResponse(text: string): { reply: string; suggestions: string[]; 
  */
 async function callGroqDirect(prompt: string, context?: string, history: { role: 'user' | 'assistant'; content: string }[] = []): Promise<string | null> {
   if (!GROQ_KEY) return null;
-  const models = ['openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'llama-3.3-70b-versatile'];
+  const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
 
   const messages = [
     { role: 'system', content: CLINICAL_SYSTEM_PROMPT + (context ? `\n\nDATABASE CONTEXT TO USE:\n${context}` : '') },
@@ -119,7 +128,6 @@ async function callGroqDirect(prompt: string, context?: string, history: { role:
         body: JSON.stringify({
           model,
           messages: messages.slice(-10), // Keep system + last 9 interactions
-          temperature: 0.2,
           max_tokens: 3000,
         }),
       });
@@ -146,7 +154,7 @@ async function callGeminiDirect(prompt: string, context?: string, historyText?: 
     const genAI = new GoogleGenerativeAI(GEMINI_KEY);
     const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
-      generationConfig: { temperature: 0.2, maxOutputTokens: 3500 },
+      generationConfig: { maxOutputTokens: 3500 },
     });
     const fullPrompt = `${CLINICAL_SYSTEM_PROMPT}${context ? `\n\nDATABASE CONTEXT TO USE:\n${context}` : ''}${historyText ? `\n\nCONVERSATION HISTORY:\n${historyText}` : ''}\n\nCLINICAL QUESTION:\n${prompt}`;
     const result = await model.generateContent(fullPrompt);
@@ -270,31 +278,34 @@ export const aiService = {
       .map(h => `${h.isUser ? 'Doctor' : 'AI'}: ${h.text}`)
       .join('\n');
 
-    // 1. Try backend server with a 10s timeout
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+    // 1. Try backend server with a 10s timeout (skipped in release if it is
+    //    only a local/LAN dev URL — it can't be reached and just stalls).
+    if (USE_BACKEND) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch(`${BACKEND_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, mode, category, topicId, categoryContext, history }),
-        signal: controller.signal,
-      });
+        const response = await fetch(`${BACKEND_URL}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, mode, category, topicId, categoryContext, history }),
+          signal: controller.signal,
+        });
 
-      clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          reply: data.reply || "I'm sorry, I received an empty response. Please try again.",
-          citations: data.citations || [],
-          suggestions: data.suggestions || [],
-          sourceType: data.sourceType || 'general_synthesis',
-        };
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            reply: data.reply || "I'm sorry, I received an empty response. Please try again.",
+            citations: data.citations || [],
+            suggestions: data.suggestions || [],
+            sourceType: data.sourceType || 'general_synthesis',
+          };
+        }
+      } catch {
+        // Backend not available or timed out — fallback to direct cloud AI
       }
-    } catch {
-      // Backend not available or timed out — fallback to direct cloud AI
     }
 
     // Determine RAG context for direct calls
@@ -352,24 +363,36 @@ function parsePearlsJSON(raw: string): import('../constants/DailyPearlsData').Cl
     if (clean.startsWith('```')) {
       clean = clean.replace(/^```(?:json)?\n?/, '').replace(/```$/, '').trim();
     }
+    // Sometimes models output text before the JSON array
+    const jsonStart = clean.indexOf('[');
+    const jsonEnd = clean.lastIndexOf(']');
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      clean = clean.slice(jsonStart, jsonEnd + 1);
+    }
+
     const arr = JSON.parse(clean);
     if (!Array.isArray(arr)) return null;
 
     return arr
       .map((item: any, idx: number) => {
-        const specId = String(item.specialtyId || 'general').toLowerCase().replace(/\s+/g, '_').trim();
+        const specId = String(item.specialtyId || item.specialty_id || 'general').toLowerCase().replace(/\s+/g, '_').trim();
+        const rule = String(item.rule || item.takeaway || item.pearl || item.clinical_pearl || item.description || '');
+        const action = String(item.action || item.stepwise_action || item.management || '');
+        const pitfall = String(item.pitfall || item.trap || item.warning || '');
+        const title = String(item.title || item.topic || 'Clinical Pearl');
+
         return {
           id: item.id || `pearl_dyn_${Date.now()}_${idx}`,
-          title: String(item.title || 'Clinical Pearl'),
-          category: String(item.category || 'Clinical Protocol'),
+          title,
+          category: String(item.category || item.domain || 'Clinical Protocol'),
           specialtyId: specId,
-          specialtyName: String(item.specialtyName || (specId.charAt(0).toUpperCase() + specId.slice(1))),
-          specialtyColor: String(item.specialtyColor || '#3B82F6'),
-          specialtyIcon: String(item.specialtyIcon || 'medkit'),
-          badge: String(item.badge || 'Key Threshold'),
-          rule: String(item.rule || ''),
-          action: String(item.action || ''),
-          pitfall: String(item.pitfall || ''),
+          specialtyName: String(item.specialtyName || item.specialty_name || (specId.charAt(0).toUpperCase() + specId.slice(1))),
+          specialtyColor: String(item.specialtyColor || item.specialty_color || '#3B82F6'),
+          specialtyIcon: String(item.specialtyIcon || item.specialty_icon || 'medkit'),
+          badge: String(item.badge || item.key_numbers || item.key_metric || 'Key Threshold'),
+          rule: rule || action,
+          action: action || rule,
+          pitfall,
           citation: String(item.citation || 'Clinical Practice Guidelines'),
         };
       })
@@ -382,7 +405,7 @@ function parsePearlsJSON(raw: string): import('../constants/DailyPearlsData').Cl
 
 async function callGroqForPearls(prompt: string): Promise<import('../constants/DailyPearlsData').ClinicalPearl[] | null> {
   if (!GROQ_KEY) return null;
-  const models = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'qwen/qwen3.6-27b'];
+  const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
 
   for (const model of models) {
     try {
@@ -398,11 +421,10 @@ async function callGroqForPearls(prompt: string): Promise<import('../constants/D
             {
               role: 'system',
               content:
-                'You are a Senior Medical Professor and Board Examination Author. Output ONLY a valid JSON array of objects. Do not include markdown backticks or commentary.',
+                'You are a Senior Medical Professor. Output ONLY a valid raw JSON array of objects with keys: id, title, category, specialtyId, specialtyName, specialtyColor, specialtyIcon, badge, rule, action, pitfall, citation. Do not include markdown ticks or explanation.',
             },
             { role: 'user', content: prompt },
           ],
-          temperature: 0.3,
           max_tokens: 2800,
         }),
       });
@@ -428,7 +450,6 @@ async function callGeminiForPearls(prompt: string): Promise<import('../constants
     const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-flash',
       generationConfig: {
-        temperature: 0.3,
         responseMimeType: 'application/json',
       },
     });

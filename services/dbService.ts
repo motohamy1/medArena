@@ -540,6 +540,16 @@ export const dbService = {
       }
     }
 
+    // 4. Absolute offline safety net: if AI fails or is offline, load from local pearlMinerService
+    if (loadedPearls.length === 0) {
+      try {
+        const { pearlMinerService } = await import('./pearlMinerService');
+        loadedPearls = pearlMinerService.getAllMinedPearls();
+      } catch (e) {
+        console.warn('[dbService] pearlMinerService fallback failed:', e);
+      }
+    }
+
     this._pearlsCache = loadedPearls;
     return loadedPearls;
   },
