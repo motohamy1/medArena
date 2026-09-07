@@ -8,9 +8,8 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const aiModel = genAI ? genAI.getGenerativeModel({ 
-    model: 'gemini-3.5-flash',
+    model: 'gemini-flash-latest',
     generationConfig: {
-        // temperature/top_p/top_k are deprecated in Gemini 3.x
         maxOutputTokens: 4096,
     }
 }) : null;
