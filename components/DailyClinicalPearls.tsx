@@ -197,7 +197,7 @@ export const DailyClinicalPearls = () => {
         <View className="py-20 items-center justify-center">
           <ActivityIndicator size="small" color={Colors.main} />
           <Text className="text-gray-muted text-[12px] font-sans-medium mt-3">
-            Loading today's clinical pearls deck...
+            Loading today&apos;s clinical pearls deck...
           </Text>
         </View>
       ) : (
@@ -563,7 +563,7 @@ export const DailyClinicalPearls = () => {
             </Text>
 
             <Text className="text-gray-muted font-sans text-[13px] text-center leading-5 mb-5">
-              You've used all <Text className="text-white font-sans-semibold">3 free daily shuffles</Text>. Your free quota resets every midnight at 00:00.
+              You&apos;ve used all <Text className="text-white font-sans-semibold">3 free daily shuffles</Text>. Your free quota resets every midnight at 00:00.
             </Text>
 
             <View className="bg-deep-teal rounded-2xl p-3.5 border border-white/5 mb-5 gap-2">

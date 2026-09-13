@@ -22,28 +22,28 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@supabase/supabase-js": "^2.112.3",
-    "expo": "^57.0.16",
-    "expo-asset": "^57.0.14",
-    "expo-blur": "~57.0.2",
-    "expo-clipboard": "~57.0.1",
+    "expo": "57.0.22",
+    "expo-asset": "57.0.17",
+    "expo-blur": "57.0.3",
+    "expo-clipboard": "57.0.2",
     "expo-constants": "^57.0.14",
     "expo-file-system": "~57.0.1",
     "expo-font": "~57.0.1",
-    "expo-haptics": "~57.0.1",
-    "expo-image": "~57.0.3",
-    "expo-linear-gradient": "~57.0.1",
-    "expo-linking": "~57.0.7",
-    "expo-router": "^57.0.16",
-    "expo-secure-store": "~57.0.1",
-    "expo-splash-screen": "^57.0.8",
+    "expo-haptics": "57.0.3",
+    "expo-image": "57.0.5",
+    "expo-linear-gradient": "57.0.2",
+    "expo-linking": "57.0.10",
+    "expo-router": "57.0.21",
+    "expo-secure-store": "57.0.4",
+    "expo-splash-screen": "57.0.9",
     "expo-status-bar": "~57.0.1",
-    "expo-symbols": "~57.0.2",
-    "expo-system-ui": "~57.0.2",
-    "expo-web-browser": "~57.0.2",
+    "expo-symbols": "57.0.3",
+    "expo-system-ui": "57.0.4",
+    "expo-web-browser": "57.0.3",
     "nativewind": "^4.2.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-native": "0.86.2",
+    "react-native": "0.86.3",
     "react-native-event-source": "^1.1.0",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.1",
@@ -58,7 +58,7 @@
   "devDependencies": {
     "@types/react": "~19.2.10",
     "eslint": "^9.25.0",
-    "eslint-config-expo": "~57.0.1",
+    "eslint-config-expo": "57.0.2",
     "sharp": "^0.35.4",
     "typescript": "~6.0.3"
   },
@@ -70,7 +70,8 @@
     }
   },
   "private": true,
-  "allowScripts": [
-    "unrs-resolver"
-  ]
+  "allowScripts": {
+    "0": "unrs-resolver",
+    "unrs-resolver@1.11.1": true
+  }
 }

@@ -913,7 +913,7 @@ export default function ReviewQueue() {
                       <Text className="text-[9px] text-gray-muted uppercase font-sans-bold mb-0.5">
                         Trigger Question
                       </Text>
-                      <Text className="text-xs text-white italic">"{proposal.trigger_query}"</Text>
+                      <Text className="text-xs text-white italic">&quot;{proposal.trigger_query}&quot;</Text>
                     </View>
                   )}
 

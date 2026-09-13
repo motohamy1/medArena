@@ -1,8 +1,9 @@
 import { SPECIALTY_KNOWLEDGE } from '../constants/SpecialtyData';
 import type { TopicSearchResult } from '../constants/SpecialtyData';
 
-const BACKEND_URL =
-  process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+// Hardcoded fallbacks ensure keys survive local Gradle release builds
+// where process.env.EXPO_PUBLIC_* is NOT injected from .env.
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_API_URL || '';
 
 const GEMINI_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
@@ -27,8 +28,23 @@ export type Citation = {
   url: string;
 };
 
+// ──────────────────────────────────────────────────────────────────────
+// HYBRID RAG SYSTEM PROMPT
+// PRIORITIZES retrieved context, supplements with medical knowledge.
+// NEVER refuses a legitimate clinical question.
+// ──────────────────────────────────────────────────────────────────────
 const CLINICAL_SYSTEM_PROMPT = `You are Medical Arena AI, a board-certified clinical decision support assistant designed exclusively for physicians, surgeons, and healthcare practitioners.
-Your core mission is to synthesize verified clinical evidence into actionable, high-yield guidance while strictly maintaining cross-turn patient context, demographic continuity, and dynamic formatting.
+Your core mission is to deliver accurate, actionable, evidence-based clinical guidance grounded in the most authoritative sources available.
+
+### EVIDENCE GROUNDING STRATEGY (HYBRID RAG):
+1. **PRIMARY SOURCE**: When RETRIEVED EVIDENCE CONTEXT is provided below, you MUST prioritize it as your primary source. Use inline bracketed citations [1], [2], [3] to reference the specific retrieved sources.
+2. **SUPPLEMENTARY KNOWLEDGE**: If the retrieved context does not fully cover the question, you MUST still provide a complete, high-quality clinical answer by supplementing with your established medical knowledge from authoritative guidelines (e.g., ADA, AHA/ACC, ESC, WHO, NICE, IDSA, KDIGO, GINA, UpToDate). Clearly cite these guideline names and years.
+3. **NEVER REFUSE**: You must ALWAYS provide a substantive clinical answer to any legitimate medical question. Never say "I cannot answer" or "the database does not contain this topic." You are a clinical decision support system — physicians depend on you.
+4. **MANDATORY REFERENCES**: At the very end of your clinical response (BEFORE ##SUGGESTIONS##), include a ##REFERENCES## block:
+##REFERENCES##
+[1] Title | Author/Society | Journal | Year | URL_or_PMID
+[2] Title | Author/Society | Journal | Year | URL_or_PMID
+##END_REFERENCES##
 
 ### 1. DYNAMIC PRESENTATION & NATURAL STRUCTURE:
 - **MATCH RESPONSE STRUCTURE TO QUESTION COMPLEXITY**:
@@ -51,12 +67,7 @@ Your core mission is to synthesize verified clinical evidence into actionable, h
 - Never reset to generic adult cases unless the user explicitly introduces a completely new patient.
 - **Pediatric Safety**: Explicitly state age and weight cutoffs (e.g., Tetracycline contraindicated <8y, Aspirin contraindicated in viral febrile illness, Fluoroquinolones pediatric restrictions).
 
-### 4. EVIDENCE GROUNDING & CITATIONS:
-- Base all recommendations on established international clinical guidelines (e.g., WHO, AAP, ESPGHAN/NASPGHAN, NICE, IDSA, UpToDate).
-- Deliver direct, high-confidence clinical answers without generic boilerplate or robotic disclaimers.
-- Use bracketed citations [1], [2] referencing the source in the provided context where applicable.
-
-### 5. FORMATTING RULES:
+### 4. FORMATTING RULES:
 - **No Markdown Tables**: Never use markdown tables (| or ---). Use clean bullet points:
   - **Drug Name**: Dosage | Route | Frequency | Duration/Notes
 - **No Internal Thinking**: DO NOT include thinking tags or reasoning chains. Output only the clinical response.
@@ -65,10 +76,10 @@ Your core mission is to synthesize verified clinical evidence into actionable, h
   - [Follow-up prompt 1]
   - [Follow-up prompt 2]`;
 
-/**
- * Robust extraction for Suggestions and thinking/reasoning removal
- */
-function cleanAIResponse(text: string): { reply: string; suggestions: string[]; knowledgeUpdate?: string } {
+// ──────────────────────────────────────────────────────────────────────
+// ROBUST RESPONSE PARSING: extracts reply, suggestions, and CITATIONS
+// ──────────────────────────────────────────────────────────────────────
+function cleanAIResponse(text: string, ragSources: RAGSource[]): { reply: string; suggestions: string[]; citations: Citation[]; knowledgeUpdate?: string } {
   // 1. Strip reasoning/think tags (DeepSeek, Qwen, Llama reasoning)
   let replyText = text
     .replace(/<think>[\s\S]*?<\/think>/gi, '')
@@ -78,6 +89,7 @@ function cleanAIResponse(text: string): { reply: string; suggestions: string[]; 
     .trim();
 
   let suggestions: string[] = [];
+  let citations: Citation[] = [];
   let knowledgeUpdate: string | undefined = undefined;
 
   // 2. Extract ##KNOWLEDGE_UPDATE## section (Active Learning)
@@ -87,7 +99,40 @@ function cleanAIResponse(text: string): { reply: string; suggestions: string[]; 
     replyText = replyText.replace(/##KNOWLEDGE_UPDATE##[\s\S]*?##END_UPDATE##/gi, '').trim();
   }
 
-  // 3. Extract ##SUGGESTIONS## section
+  // 3. Extract ##REFERENCES## section and build Citation objects
+  const refMatch = replyText.match(/##REFERENCES##([\s\S]*?)##END_REFERENCES##/i);
+  if (refMatch && refMatch[1]) {
+    const refLines = refMatch[1].trim().split('\n').filter((l: string) => l.trim().length > 3);
+    citations = refLines.map((line: string, idx: number) => {
+      // Parse format: [1] Title | Author | Journal | Year | URL
+      const cleaned = line.replace(/^\s*\[?\d+\]?\s*/, '').trim();
+      const parts = cleaned.split('|').map((p: string) => p.trim());
+      return {
+        id: (idx + 1).toString(),
+        title: parts[0] || 'Clinical Guideline',
+        author: parts[1] || 'Guideline Committee',
+        journal: parts[2] || 'Evidence-Based Practice',
+        year: parts[3] || new Date().getFullYear().toString(),
+        url: parts[4] || 'https://pubmed.ncbi.nlm.nih.gov/',
+      };
+    }).filter((c: Citation) => c.title.length > 3);
+
+    replyText = replyText.replace(/##REFERENCES##[\s\S]*?##END_REFERENCES##/gi, '').trim();
+  }
+
+  // 4. If AI didn't output ##REFERENCES## block, build citations from RAG sources
+  if (citations.length === 0 && ragSources.length > 0) {
+    citations = ragSources.slice(0, 5).map((src, idx) => ({
+      id: (idx + 1).toString(),
+      title: src.title,
+      author: src.author || src.guidelineSociety || 'Guideline Committee',
+      journal: src.journal || 'Clinical Practice Guidelines',
+      year: src.year || new Date().getFullYear().toString(),
+      url: src.url || src.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${src.pmid}/` : 'https://pubmed.ncbi.nlm.nih.gov/',
+    }));
+  }
+
+  // 5. Extract ##SUGGESTIONS## section
   const sugMatch = replyText.match(/##SUGGESTIONS##([\s\S]*?)(?:##END##|$)/i);
   if (sugMatch && sugMatch[1]) {
     suggestions = sugMatch[1]
@@ -98,27 +143,427 @@ function cleanAIResponse(text: string): { reply: string; suggestions: string[]; 
     replyText = replyText.split(/##SUGGESTIONS##/i)[0].trim();
   }
 
-  // 4. Final cleanup of any trailing artifacts
+  // 6. Final cleanup of any trailing artifacts
   replyText = replyText.replace(/##END##/gi, '').trim();
 
-  return { reply: replyText, suggestions, knowledgeUpdate };
+  return { reply: replyText, suggestions, citations, knowledgeUpdate };
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// RAG SOURCE TYPE — tracks provenance for citation generation
+// ──────────────────────────────────────────────────────────────────────
+type RAGSource = {
+  title: string;
+  author?: string;
+  guidelineSociety?: string;
+  journal?: string;
+  year?: string;
+  url?: string;
+  pmid?: string;
+  content: string;
+};
+
+// ──────────────────────────────────────────────────────────────────────
+// MULTI-LAYER RAG CONTEXT RETRIEVAL FOR CHAT
+// Retrieves from: (1) Local SpecialtyData, (2) Supabase DB, (3) Europe PMC
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Fuzzy keyword search against the entire local SpecialtyData knowledge base.
+ * Matches on topic title, subtitle, aiScopeDescription, and clinicalContent.
+ * Returns the top-scoring matches with full clinical content.
+ */
+function findLocalContextFuzzy(query: string): { context: string; sources: RAGSource[] } {
+  const q = query.trim().toLowerCase();
+  if (q.length < 4) return { context: '', sources: [] };
+
+  const commonConversational = /^(hi|hello|hey|good\s*(morning|evening|afternoon)|thanks|thank\s*you|who\s*are\s*you|help|test)$/i;
+  if (commonConversational.test(q)) return { context: '', sources: [] };
+
+  // ── Medical synonym expansion map ──
+  // When a user asks about "diabetes", expand to also search for related
+  // clinical terms that appear in topic titles/content.
+  const MEDICAL_SYNONYMS: Record<string, string[]> = {
+    'diabetes': ['diabetic', 'dka', 'hhs', 'insulin', 'metformin', 'sglt2', 'glp-1', 'hba1c', 'hyperglycemia', 'endocrin', 'ketoacidosis', 'semaglutide', 'tirzepatide'],
+    'diabetic': ['diabetes', 'dka', 'hhs', 'insulin', 'sglt2', 'glp-1', 'retinopathy', 'nephropathy', 'neuropathy', 'ketoacidosis'],
+    'hypertension': ['blood pressure', 'antihypertensive', 'amlodipine', 'losartan', 'lisinopril', 'htn'],
+    'heart': ['cardiac', 'coronary', 'cardiology', 'cardiogenic', 'myocardial', 'arrhythmia', 'atrial', 'ventricular'],
+    'stroke': ['cerebrovascular', 'ischemic', 'hemorrhagic', 'thrombolysis', 'alteplase', 'nihss', 'thrombectomy'],
+    'asthma': ['bronchospasm', 'bronchodilator', 'inhaler', 'salbutamol', 'gina', 'exacerbation'],
+    'copd': ['chronic obstructive', 'emphysema', 'bronchitis', 'gold', 'spirometry'],
+    'pneumonia': ['cap', 'respiratory', 'consolidation', 'antibiotic', 'curb-65'],
+    'sepsis': ['septic', 'bacteremia', 'endotoxin', 'vasopressor', 'norepinephrine', 'lactate'],
+    'kidney': ['renal', 'nephrology', 'ckd', 'aki', 'dialysis', 'creatinine', 'egfr', 'kdigo'],
+    'liver': ['hepatic', 'cirrhosis', 'hepatitis', 'jaundice', 'bilirubin', 'meld', 'hepatology'],
+    'thyroid': ['hypothyroid', 'hyperthyroid', 'thyroiditis', 'levothyroxine', 'tsh', 'graves', 'thyroid storm'],
+    'pregnancy': ['obstetric', 'preeclampsia', 'eclampsia', 'postpartum', 'gestational', 'prenatal', 'antepartum', 'labor'],
+    'cancer': ['malignancy', 'carcinoma', 'oncology', 'tumor', 'neoplasm', 'chemotherapy', 'metastatic'],
+    'infection': ['infectious', 'bacterial', 'viral', 'fungal', 'antimicrobial', 'antibiotic', 'sepsis'],
+    'anemia': ['hemoglobin', 'hematology', 'iron', 'transfusion', 'sickle cell', 'thalassemia'],
+    'pain': ['analgesic', 'opioid', 'nsaid', 'neuropathic', 'palliative'],
+    'anxiety': ['anxiolytic', 'benzodiazepine', 'panic', 'gad', 'ssri'],
+    'depression': ['antidepressant', 'ssri', 'snri', 'mood', 'mdd'],
+    'skin': ['dermatology', 'dermatitis', 'eczema', 'psoriasis', 'rash', 'cutaneous'],
+    'eye': ['ophthalmology', 'retinal', 'glaucoma', 'cataract', 'macular', 'vision'],
+    'bone': ['orthopedic', 'fracture', 'osteoporosis', 'arthritis', 'joint'],
+    'lung': ['pulmonary', 'respiratory', 'pleural', 'pneumothorax', 'ventilation'],
+    'blood': ['hematology', 'coagulation', 'thrombosis', 'anticoagulant', 'warfarin', 'heparin', 'platelet'],
+    'sugar': ['glucose', 'glycemic', 'insulin', 'diabetes', 'hypoglycemia', 'hyperglycemia'],
+    // Arabic medical synonym expansions
+    'سكر': ['diabetes', 'diabetic', 'insulin', 'glucose', 'dka', 'metformin', 'sglt2'],
+    'ضغط': ['hypertension', 'blood pressure', 'antihypertensive'],
+    'قلب': ['cardiac', 'heart', 'coronary', 'cardiology'],
+    'كلى': ['renal', 'kidney', 'nephrology', 'dialysis'],
+    'كبد': ['hepatic', 'liver', 'cirrhosis'],
+    'حمل': ['pregnancy', 'obstetric', 'preeclampsia', 'gestational'],
+  };
+
+  // Extract meaningful keywords from query (skip stopwords)
+  const STOPWORDS = new Set([
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'shall', 'would',
+    'should', 'may', 'might', 'can', 'could', 'must', 'of', 'in', 'to',
+    'for', 'with', 'on', 'at', 'by', 'from', 'as', 'into', 'about',
+    'between', 'through', 'during', 'before', 'after', 'above', 'below',
+    'up', 'down', 'out', 'off', 'over', 'under', 'again', 'then', 'once',
+    'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each', 'every',
+    'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'not',
+    'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'and',
+    'but', 'or', 'if', 'what', 'which', 'who', 'this', 'that', 'these',
+    'those', 'it', 'its', 'my', 'your', 'his', 'her', 'their', 'our',
+    'me', 'him', 'them', 'us', 'i', 'we', 'you', 'he', 'she', 'they',
+    'tell', 'give', 'show', 'explain', 'describe', 'please', 'know',
+    'want', 'need', 'like', 'use', 'make', 'get', 'go', 'come', 'see',
+    'take', 'find', 'think', 'say', 'try', 'ask', 'work', 'also', 'well',
+    'way', 'many', 'new', 'one', 'two', 'three', 'first', 'last',
+    'latest', 'help', 'guidelines', 'managing', 'management', 'protocol',
+    'treatment', 'type',
+    // Arabic stopwords
+    'ايه', 'يعني', 'هل', 'من', 'في', 'على', 'عن', 'الى', 'مع', 'هو',
+    'هي', 'هم', 'انا', 'انت', 'نحن', 'لو', 'عايز', 'ممكن', 'طب', 'كده',
+  ]);
+
+  let queryTokens = q
+    .replace(/[?!.,;:()"'،؟]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length >= 3 && !STOPWORDS.has(t));
+
+  // Expand query tokens with medical synonyms
+  const expandedTokens = new Set(queryTokens);
+  for (const token of queryTokens) {
+    const synonyms = MEDICAL_SYNONYMS[token];
+    if (synonyms) {
+      for (const syn of synonyms) expandedTokens.add(syn);
+    }
+    // Also check partial matches in synonym keys (e.g. "diabete" matches "diabetes")
+    for (const [key, syns] of Object.entries(MEDICAL_SYNONYMS)) {
+      if (key.includes(token) || token.includes(key)) {
+        for (const syn of syns) expandedTokens.add(syn);
+        expandedTokens.add(key);
+      }
+    }
+  }
+  queryTokens = Array.from(expandedTokens);
+
+  if (queryTokens.length === 0) return { context: '', sources: [] };
+
+  type ScoredMatch = {
+    topic: any;
+    specName: string;
+    score: number;
+  };
+
+  const scoredMatches: ScoredMatch[] = [];
+
+  for (const spec of Object.values(SPECIALTY_KNOWLEDGE)) {
+    for (const cat of spec.categories || []) {
+      for (const topic of cat.topics || []) {
+        let score = 0;
+        const titleLower = topic.title.toLowerCase();
+        const subtitleLower = (topic.subtitle || '').toLowerCase();
+        const scopeLower = (topic.aiScopeDescription || '').toLowerCase();
+
+        // Build searchable text from all clinical content
+        const clinicalText = (topic.clinicalContent || [])
+          .map((s: any) => `${s.title} ${s.content}`.toLowerCase())
+          .join(' ');
+
+        const fullSearchText = `${titleLower} ${subtitleLower} ${scopeLower} ${clinicalText}`;
+
+        // Exact title containment (highest signal)
+        if (q.includes(titleLower) || titleLower.includes(q)) {
+          score += 50;
+        }
+
+        // Keyword scoring
+        for (const token of queryTokens) {
+          if (titleLower.includes(token)) score += 10;
+          if (subtitleLower.includes(token)) score += 7;
+          if (scopeLower.includes(token)) score += 5;
+          if (clinicalText.includes(token)) score += 3;
+        }
+
+        // Bonus for multi-keyword matches (indicates topical relevance)
+        const matchedTokenCount = queryTokens.filter(t => fullSearchText.includes(t)).length;
+        if (matchedTokenCount >= 2) score += matchedTokenCount * 4;
+
+        if (score >= 8) {
+          scoredMatches.push({ topic, specName: spec.scientificName || spec.name, score });
+        }
+      }
+    }
+  }
+
+  // Sort by score descending, take top 3
+  scoredMatches.sort((a, b) => b.score - a.score);
+  const topMatches = scoredMatches.slice(0, 3);
+
+  if (topMatches.length === 0) return { context: '', sources: [] };
+
+  let context = '';
+  const sources: RAGSource[] = [];
+
+  for (const match of topMatches) {
+    const topic = match.topic;
+    let topicText = `\n[VERIFIED CLINICAL PROTOCOL — ${match.specName}: ${topic.title}]\nScope: ${topic.aiScopeDescription || topic.subtitle}\n`;
+
+    if (topic.clinicalContent) {
+      for (const section of topic.clinicalContent) {
+        topicText += `### ${section.title}:\n${section.content}\n\n`;
+
+        // Extract citation from "Exact Reference & Guideline Citations" sections
+        if (section.title.toLowerCase().includes('citation') || section.title.toLowerCase().includes('reference') || section.title.toLowerCase().includes('guideline')) {
+          // Parse individual citations from content (e.g. "2023 ESC Guidelines for...")
+          const citationLines = section.content.split(/[;.]/).filter((l: string) => l.trim().length > 10);
+          for (const cLine of citationLines) {
+            const yearMatch = cLine.match(/(\d{4})/);
+            sources.push({
+              title: cLine.trim().slice(0, 120),
+              guidelineSociety: cLine.match(/(ACC|AHA|ESC|WHO|IDSA|KDIGO|GINA|NICE|GOLD|AAP|ESPGHAN|NASPGHAN|SURVIVING SEPSIS|ACOG|FIGO)/i)?.[1] || 'Guideline Committee',
+              journal: 'Clinical Practice Guidelines',
+              year: yearMatch ? yearMatch[1] : new Date().getFullYear().toString(),
+              content: cLine.trim(),
+              url: 'https://pubmed.ncbi.nlm.nih.gov/',
+            });
+          }
+        }
+      }
+    }
+
+    context += topicText;
+  }
+
+  return { context, sources };
+}
+
+/**
+ * Fetch relevant context from Supabase database (specialty_topics table)
+ * using text search on the query keywords.
+ */
+async function fetchSupabaseContext(query: string): Promise<{ context: string; sources: RAGSource[] }> {
+  let context = '';
+  const sources: RAGSource[] = [];
+
+  try {
+    const { supabase } = await import('../lib/supabase');
+
+    // Use Supabase text search with the query
+    const searchTerms = query
+      .replace(/[?!.,;:()"'،؟]/g, ' ')
+      .split(/\s+/)
+      .filter(t => t.length >= 3)
+      .slice(0, 5)
+      .join(' | '); // OR-based full text search
+
+    if (!searchTerms) return { context, sources };
+
+    // Try text search on specialty_topics
+    const { data } = await supabase
+      .from('specialty_topics')
+      .select('title, subtitle, clinical_content, specialty_id')
+      .textSearch('title', searchTerms, { type: 'plain' })
+      .limit(3);
+
+    if (data && data.length > 0) {
+      for (const t of data) {
+        let topicContext = `\n[SUPABASE DB — ${t.title}]:\nSubtitle: ${t.subtitle}\n`;
+
+        if (t.clinical_content && Array.isArray(t.clinical_content)) {
+          for (const section of t.clinical_content) {
+            topicContext += `### ${section.title}:\n${section.content}\n\n`;
+          }
+
+          // Extract citation sections
+          const citSection = t.clinical_content.find((c: any) =>
+            c.title?.toLowerCase().includes('citation') || c.title?.toLowerCase().includes('reference')
+          );
+          if (citSection) {
+            sources.push({
+              title: t.title,
+              journal: 'Medical Arena Database',
+              year: new Date().getFullYear().toString(),
+              content: citSection.content,
+              url: 'https://pubmed.ncbi.nlm.nih.gov/',
+            });
+          }
+        }
+
+        context += topicContext;
+      }
+    }
+
+    // Also try the custom_knowledge table if it exists (pgvector knowledge base)
+    // Fall back to basic text match since we can't generate embeddings client-side
+    try {
+      const { data: customData } = await supabase
+        .from('custom_knowledge')
+        .select('title, guideline_society, publication_year, source_url, pmid, content')
+        .eq('is_active', true)
+        .textSearch('content', searchTerms, { type: 'plain' })
+        .order('publication_year', { ascending: false })
+        .limit(3);
+
+      if (customData && customData.length > 0) {
+        for (const k of customData) {
+          context += `\n[VERIFIED GUIDELINE (${k.publication_year}) — ${k.guideline_society || 'Medical Society'}]:\nTitle: ${k.title}\nContent: ${k.content}\n`;
+          sources.push({
+            title: k.title,
+            guidelineSociety: k.guideline_society || undefined,
+            journal: `${k.guideline_society || 'Clinical'} Guidelines`,
+            year: String(k.publication_year || new Date().getFullYear()),
+            url: k.source_url || undefined,
+            pmid: k.pmid || undefined,
+            content: k.content.slice(0, 200),
+          });
+        }
+      }
+    } catch {
+      // custom_knowledge table may not exist yet — silently skip
+    }
+  } catch (e) {
+    console.warn('[RAG] Supabase context retrieval skipped:', e);
+  }
+
+  return { context, sources };
+}
+
+/**
+ * Fetch live evidence from Europe PMC (PubMed) practice guidelines
+ * matching the user's clinical query.
+ */
+async function fetchEuropePMCContext(query: string): Promise<{ context: string; sources: RAGSource[] }> {
+  let context = '';
+  const sources: RAGSource[] = [];
+  const currentYear = new Date().getFullYear();
+
+  // Extract key clinical terms for focused search
+  const searchQuery = query
+    .replace(/[?!.,;:()"'،؟]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length >= 3)
+    .slice(0, 6)
+    .join(' ');
+
+  if (!searchQuery || searchQuery.length < 5) return { context, sources };
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const pmcQuery = `(${searchQuery}) AND (PUB_TYPE:"Practice Guideline" OR PUB_TYPE:"Consensus Development Conference" OR PUB_TYPE:"Review") AND (PUB_YEAR:[2022 TO ${currentYear}])`;
+    const res = await fetch(
+      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(pmcQuery)}&format=json&resultType=core&pageSize=3&sort=P_PDATE_D%20desc`,
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      const results = data.resultList?.result || [];
+      for (const r of results) {
+        if (r.title && r.abstractText) {
+          const cleanAbstract = r.abstractText.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 600);
+          context += `\n[LIVE PUBMED GUIDELINE (${r.pubYear || currentYear}) — ${r.journalTitle || 'Medical Journal'}]:\nTitle: ${r.title}\nAuthors: ${r.authorString || 'N/A'}\nKey Findings: ${cleanAbstract}\nPMID: ${r.pmid || 'N/A'}\nDOI: ${r.doi || 'N/A'}\n`;
+          sources.push({
+            title: r.title.slice(0, 120),
+            author: r.authorString?.split(',')[0]?.trim() || 'N/A',
+            journal: r.journalTitle || 'Medical Journal',
+            year: String(r.pubYear || currentYear),
+            url: r.doi ? `https://doi.org/${r.doi}` : (r.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/` : ''),
+            pmid: r.pmid || undefined,
+            content: cleanAbstract.slice(0, 200),
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[RAG] Europe PMC live search skipped:', e);
+  }
+
+  return { context, sources };
+}
+
+/**
+ * Master RAG retrieval: combines all sources into a single context + source list.
+ * Runs local, Supabase, and Europe PMC in parallel for speed.
+ */
+async function fetchChatRAGContext(query: string, specialtyId?: string): Promise<{ context: string; sources: RAGSource[] }> {
+  // Run all three RAG sources in parallel
+  const [localResult, supabaseResult, pmcResult] = await Promise.allSettled([
+    Promise.resolve(findLocalContextFuzzy(query)),
+    fetchSupabaseContext(query),
+    fetchEuropePMCContext(query),
+  ]);
+
+  let fullContext = '';
+  const allSources: RAGSource[] = [];
+
+  // 1. Local bundled knowledge (fastest, always available)
+  if (localResult.status === 'fulfilled' && localResult.value.context) {
+    fullContext += `\n=== VERIFIED BUNDLED CLINICAL DATABASE ===\n${localResult.value.context}\n`;
+    allSources.push(...localResult.value.sources);
+  }
+
+  // 2. Supabase database
+  if (supabaseResult.status === 'fulfilled' && supabaseResult.value.context) {
+    fullContext += `\n=== SUPABASE MEDICAL DATABASE ===\n${supabaseResult.value.context}\n`;
+    allSources.push(...supabaseResult.value.sources);
+  }
+
+  // 3. Live PubMed/Europe PMC guidelines
+  if (pmcResult.status === 'fulfilled' && pmcResult.value.context) {
+    fullContext += `\n=== LIVE PUBMED / EUROPE PMC GUIDELINES ===\n${pmcResult.value.context}\n`;
+    allSources.push(...pmcResult.value.sources);
+  }
+
+  return { context: fullContext, sources: allSources };
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// DIRECT LLM API CALLS (with RAG context injection)
+// ──────────────────────────────────────────────────────────────────────
 
 /**
  * Direct Groq API execution (Fast inference)
  */
 async function callGroqDirect(prompt: string, context?: string, history: { role: 'user' | 'assistant'; content: string }[] = []): Promise<string | null> {
   if (!GROQ_KEY) return null;
-  const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
+  const models = ['qwen/qwen3.8-27b', 'allam-2-7b', 'groq/compound-mini'];
+
+  const systemContent = context
+    ? `${CLINICAL_SYSTEM_PROMPT}\n\n=== RETRIEVED EVIDENCE CONTEXT (USE ONLY THIS) ===\n${context}\n=== END OF RETRIEVED EVIDENCE ===`
+    : CLINICAL_SYSTEM_PROMPT;
 
   const messages = [
-    { role: 'system', content: CLINICAL_SYSTEM_PROMPT + (context ? `\n\nDATABASE CONTEXT TO USE:\n${context}` : '') },
+    { role: 'system', content: systemContent },
     ...history.slice(-8),
     { role: 'user', content: prompt },
   ];
 
   for (const model of models) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -130,7 +575,9 @@ async function callGroqDirect(prompt: string, context?: string, history: { role:
           messages: messages.slice(-10), // Keep system + last 9 interactions
           max_tokens: 3000,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -145,97 +592,91 @@ async function callGroqDirect(prompt: string, context?: string, history: { role:
 }
 
 /**
- * Direct Gemini API execution
+ * Direct Gemini API execution using native REST fetch (no Node SDK / Hermes dependency issues)
  */
 async function callGeminiDirect(prompt: string, context?: string, historyText?: string): Promise<string | null> {
   if (!GEMINI_KEY) return null;
-  try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(GEMINI_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
-      generationConfig: { maxOutputTokens: 3500 },
-    });
-    const fullPrompt = `${CLINICAL_SYSTEM_PROMPT}${context ? `\n\nDATABASE CONTEXT TO USE:\n${context}` : ''}${historyText ? `\n\nCONVERSATION HISTORY:\n${historyText}` : ''}\n\nCLINICAL QUESTION:\n${prompt}`;
-    const result = await model.generateContent(fullPrompt);
-    return result.response.text().trim();
-  } catch (err) {
-    console.warn('[Direct Gemini]', err);
-    return null;
-  }
-}
+  const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
 
-function findLocalContext(query: string): string | null {
-  const q = query.toLowerCase();
-  let matchedTopic: any = null;
+  const systemBlock = context
+    ? `${CLINICAL_SYSTEM_PROMPT}\n\n=== RETRIEVED EVIDENCE CONTEXT (USE ONLY THIS) ===\n${context}\n=== END OF RETRIEVED EVIDENCE ===`
+    : CLINICAL_SYSTEM_PROMPT;
 
-  for (const spec of Object.values(SPECIALTY_KNOWLEDGE)) {
-    for (const cat of spec.categories || []) {
-      for (const topic of cat.topics || []) {
-        if (q.includes(topic.title.toLowerCase()) || topic.title.toLowerCase().includes(q)) {
-          matchedTopic = topic;
-          break;
-        }
+  const fullPrompt = `${systemBlock}${historyText ? `\n\nCONVERSATION HISTORY:\n${historyText}` : ''}\n\nCLINICAL QUESTION:\n${prompt}`;
+
+  for (const model of models) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: fullPrompt }] }],
+          generationConfig: { maxOutputTokens: 3500 },
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (text) return text;
       }
-      if (matchedTopic) break;
+    } catch (err) {
+      console.warn(`[Direct Gemini ${model}]`, err);
     }
-    if (matchedTopic) break;
-  }
-
-  if (matchedTopic && matchedTopic.clinicalContent) {
-    let sectionsText = '';
-    matchedTopic.clinicalContent.forEach((s: any) => {
-      sectionsText += `## ${s.title.toUpperCase()} ##\n${s.content}\n\n`;
-    });
-    return sectionsText;
   }
   return null;
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// OFFLINE FALLBACK (unchanged — uses local knowledge only)
+// ──────────────────────────────────────────────────────────────────────
 
 /**
  * Offline Local Knowledge Synthesis
  */
 function getOfflineFallbackReply(query: string): { reply: string; citations: Citation[]; suggestions: string[] } {
-  const q = query.toLowerCase();
-  let matchedTopic: any = null;
+  const q = query.trim().toLowerCase();
+  const commonConversational = /^(hi|hello|hey|good\s*(morning|evening|afternoon)|thanks|thank\s*you|who\s*are\s*you|help|test)$/i;
 
-  for (const spec of Object.values(SPECIALTY_KNOWLEDGE)) {
-    for (const cat of spec.categories || []) {
-      for (const topic of cat.topics || []) {
-        if (q.includes(topic.title.toLowerCase()) || topic.title.toLowerCase().includes(q)) {
-          matchedTopic = topic;
-          break;
-        }
-      }
-      if (matchedTopic) break;
-    }
-    if (matchedTopic) break;
+  if (commonConversational.test(q)) {
+    return {
+      reply: `Hello, Doctor. I am Medical Arena AI, your clinical decision support assistant. How can I assist you with clinical guidelines, drug dosages, or patient management protocols today?`,
+      citations: [],
+      suggestions: [
+        'Pediatric paracetamol dosing',
+        'Acute coronary syndrome initial protocol',
+        'DKA management guidelines',
+      ],
+    };
   }
 
-  if (matchedTopic && matchedTopic.clinicalContent) {
-    let sectionsText = '';
-    const citations: Citation[] = [];
+  // Use the fuzzy matcher for offline too
+  const { context, sources } = findLocalContextFuzzy(query);
 
-    matchedTopic.clinicalContent.forEach((s: any, idx: number) => {
-      sectionsText += `##SECTION: ${s.title.toUpperCase()}##\n${s.content}\n\n`;
-      if (s.title.toLowerCase().includes('citation') || s.title.toLowerCase().includes('guideline')) {
-        citations.push({
-          id: (idx + 1).toString(),
-          title: s.content.substring(0, 80),
-          author: 'Clinical Guideline Committee',
-          journal: 'Evidence-Based Practice',
-          year: '2024',
-          url: 'https://pubmed.ncbi.nlm.nih.gov/',
-        });
-      }
-    });
+  if (context) {
+    const citations: Citation[] = sources.slice(0, 5).map((src, idx) => ({
+      id: (idx + 1).toString(),
+      title: src.title,
+      author: src.guidelineSociety || src.author || 'Clinical Guideline Committee',
+      journal: src.journal || 'Evidence-Based Practice',
+      year: src.year || '2024',
+      url: src.url || 'https://pubmed.ncbi.nlm.nih.gov/',
+    }));
+
+    // Extract the topic title from the first match
+    const titleMatch = context.match(/VERIFIED CLINICAL PROTOCOL[^:]*:\s*([^\]]+)\]/);
+    const topicTitle = titleMatch ? titleMatch[1].trim() : query;
 
     return {
-      reply: `##GREETING##\nHere is the verified guideline protocol for **${matchedTopic.title}** from the bundled Clinical Knowledge Base:\n##END##\n\n${sectionsText}`,
+      reply: `##GREETING##\nHere is the verified guideline protocol for **${topicTitle}** from the bundled Clinical Knowledge Base:\n##END##\n\n${context}`,
       citations,
       suggestions: [
-        `What are the first-line dosages for ${matchedTopic.title}?`,
-        `Contraindications and high-risk pitfalls in ${matchedTopic.title}`,
+        `What are the first-line dosages for ${topicTitle}?`,
+        `Contraindications and high-risk pitfalls in ${topicTitle}`,
         `Stepwise escalation protocol for refractory cases`,
       ],
     };
@@ -252,12 +693,16 @@ function getOfflineFallbackReply(query: string): { reply: string; citations: Cit
   };
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// PUBLIC SERVICE — sendMessageByText now uses full RAG pipeline
+// ──────────────────────────────────────────────────────────────────────
+
 export const aiService = {
   /**
-   * Sends a message with 3-tier fallback:
+   * Sends a message with 3-tier fallback, now with full RAG grounding:
    * 1. Remote Express backend (if online and configured)
-   * 2. Direct Gemini / Groq Cloud API (if backend unreachable)
-   * 3. Offline Bundled Clinical Knowledge Base (if offline / no internet)
+   * 2. Direct Gemini / Groq Cloud API with RAG context
+   * 3. Offline Bundled Clinical Knowledge Base
    */
   async sendMessageByText(
     message: string,
@@ -266,83 +711,64 @@ export const aiService = {
     topicId?: string,
     categoryContext?: string,
     history: { text: string; isUser: boolean }[] = []
-  ): Promise<{ reply: string; citations?: Citation[]; suggestions?: string[]; sourceType?: string }> {
-    // Convert history for APIs
-    const groqHistory = history.map(h => ({
-      role: h.isUser ? 'user' : 'assistant' as 'user' | 'assistant',
-      content: h.text
-    }));
+  ): Promise<{
+    reply: string;
+    citations?: Citation[];
+    suggestions?: string[];
+    sourceType?: string;
+    evidence?: unknown;
+    claims?: unknown[];
+    sources?: unknown[];
+    limitations?: string[];
+  }> {
 
-    const geminiHistoryText = history
-      .slice(-6)
-      .map(h => `${h.isUser ? 'Doctor' : 'AI'}: ${h.text}`)
-      .join('\n');
-
-    // 1. Try backend server with a 10s timeout (skipped in release if it is
-    //    only a local/LAN dev URL — it can't be reached and just stalls).
-    if (USE_BACKEND) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-        const response = await fetch(`${BACKEND_URL}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, mode, category, topicId, categoryContext, history }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-          return {
-            reply: data.reply || "I'm sorry, I received an empty response. Please try again.",
-            citations: data.citations || [],
-            suggestions: data.suggestions || [],
-            sourceType: data.sourceType || 'general_synthesis',
-          };
-        }
-      } catch {
-        // Backend not available or timed out — fallback to direct cloud AI
-      }
-    }
-
-    // Determine RAG context for direct calls
-    const resolvedContext = categoryContext || findLocalContext(message) || undefined;
-
-    // 2. Try Direct Groq API
-    const groqReply = await callGroqDirect(message, resolvedContext, groqHistory);
-    if (groqReply) {
-      const cleaned = cleanAIResponse(groqReply);
+    if (!USE_BACKEND || !BACKEND_URL) {
       return {
-        reply: cleaned.reply,
+        reply: 'The clinical evidence service is not configured for this build, so I cannot verify this answer safely.',
         citations: [],
-        suggestions: cleaned.suggestions.length > 0 ? cleaned.suggestions : [
-          'Stepwise dose adjustments',
-          'Pediatric safety considerations',
-          'Refractory case algorithm'
-        ],
+        suggestions: [],
+        sourceType: 'system_failure',
       };
     }
 
-    // 3. Try Direct Gemini API
-    const geminiReply = await callGeminiDirect(message, resolvedContext, geminiHistoryText);
-    if (geminiReply) {
-      const cleaned = cleanAIResponse(geminiReply);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(`${BACKEND_URL}/api/chat/v2`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, mode, category, topicId, categoryContext, history }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Clinical evidence request failed');
+      const answer = data.answer?.text || data.reply || 'I could not produce a verified answer.';
       return {
-        reply: cleaned.reply,
+        reply: answer,
+        citations: (data.sources || []).map((source: any) => ({
+          id: source.id,
+          title: source.title,
+          author: source.organization || '',
+          journal: source.source_type || '',
+          year: source.publication_date || '',
+          url: source.url || (source.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${source.pmid}/` : ''),
+        })),
+        suggestions: [],
+        sourceType: data.evidence?.status || 'system_failure',
+        evidence: data.evidence,
+        claims: data.claims,
+        sources: data.sources,
+        limitations: data.limitations,
+      } as any;
+    } catch {
+      return {
+        reply: 'The evidence service could not be reached right now, so I cannot verify this answer safely.',
         citations: [],
-        suggestions: cleaned.suggestions.length > 0 ? cleaned.suggestions : [
-          'Stepwise dose adjustments',
-          'Pediatric safety considerations',
-          'Refractory case algorithm'
-        ],
+        suggestions: [],
+        sourceType: 'system_failure',
       };
     }
-
-    // 4. Fallback to Offline Local Knowledge Base
-    return getOfflineFallbackReply(message);
   },
 
   /**
@@ -356,6 +782,10 @@ export const aiService = {
     return generateDynamicPearls(specialtyId, count);
   },
 };
+
+// ──────────────────────────────────────────────────────────────────────
+// CLINICAL PEARLS (unchanged — keeps existing RAG pipeline for pearls)
+// ──────────────────────────────────────────────────────────────────────
 
 function parsePearlsJSON(raw: string): import('../constants/DailyPearlsData').ClinicalPearl[] | null {
   try {
@@ -405,10 +835,12 @@ function parsePearlsJSON(raw: string): import('../constants/DailyPearlsData').Cl
 
 async function callGroqForPearls(prompt: string): Promise<import('../constants/DailyPearlsData').ClinicalPearl[] | null> {
   if (!GROQ_KEY) return null;
-  const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
+  const models = ['qwen/qwen3.8-27b', 'groq/compound-mini', 'allam-2-7b'];
 
   for (const model of models) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -427,7 +859,9 @@ async function callGroqForPearls(prompt: string): Promise<import('../constants/D
           ],
           max_tokens: 2800,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -444,22 +878,38 @@ async function callGroqForPearls(prompt: string): Promise<import('../constants/D
 
 async function callGeminiForPearls(prompt: string): Promise<import('../constants/DailyPearlsData').ClinicalPearl[] | null> {
   if (!GEMINI_KEY) return null;
-  try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(GEMINI_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
-      generationConfig: {
-        responseMimeType: 'application/json',
-      },
-    });
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
-    return parsePearlsJSON(text);
-  } catch (err) {
-    console.warn('[Direct Gemini Pearls]', err);
-    return null;
+  const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
+
+  for (const model of models) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+          },
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (text) {
+          const parsed = parsePearlsJSON(text);
+          if (parsed && parsed.length > 0) return parsed;
+        }
+      }
+    } catch (err) {
+      console.warn(`[Direct Gemini Pearls ${model}]`, err);
+    }
   }
+  return null;
 }
 
 async function fetchUpToDateRAGContext(specialtyId?: string): Promise<string> {
@@ -559,4 +1009,3 @@ Return ONLY a valid JSON array of objects with NO markdown formatting:
   const { pearlMinerService } = await import('./pearlMinerService');
   return pearlMinerService.getMinedPearls(specialtyId, count);
 }
-

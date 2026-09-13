@@ -341,7 +341,7 @@ export default function SpecialtyDashboard() {
               <View className="p-6 rounded-3xl bg-[#0d1214] border border-white/10 items-center">
                 <Ionicons name="search" size={36} color={Colors.grayMuted} />
                 <Text className="text-white font-sans-bold text-base mt-2 text-center">
-                  No direct topic found for "{searchText}"
+                  No direct topic found for &quot;{searchText}&quot;
                 </Text>
                 <Text className="text-gray-400 text-xs text-center mt-1 mb-4 leading-4">
                   Synthesize a verified protocol from medical references or consult the specialty AI.

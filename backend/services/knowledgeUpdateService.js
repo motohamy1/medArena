@@ -49,7 +49,7 @@ async function autoReviewAndUpdateTopics(newTextContent, resourceTitle) {
         // We batch process topics to not overwhelm the model. 
         // For simplicity, we send them all but tell it to ONLY return the ones that need updates.
         const batchSize = 10;
-        let totalUpdated = 0;
+        let totalProposals = 0;
 
         for (let i = 0; i < existingTopics.length; i += batchSize) {
             const batch = existingTopics.slice(i, i + batchSize);
@@ -76,23 +76,28 @@ async function autoReviewAndUpdateTopics(newTextContent, resourceTitle) {
             try {
                 const updatedTopics = JSON.parse(responseText);
                 if (updatedTopics && updatedTopics.length > 0) {
-                    console.log(`[Auto-Update] Found ${updatedTopics.length} topics that require updating. Processing...`);
-                    
-                    // Upsert the updated topics back to Supabase
+                    console.log(`[Auto-Update] Found ${updatedTopics.length} review proposals.`);
                     for (const topic of updatedTopics) {
-                        if(topic.id) {
-                            const { error: updateError } = await supabase
-                                .from('topics')
-                                .update({ clinical_content: topic.clinical_content })
-                                .eq('id', topic.id);
-                                
-                            if(updateError) {
-                                console.error(`[Auto-Update] Error updating topic ${topic.topic_id}:`, updateError);
-                            } else {
-                                totalUpdated++;
-                                console.log(`[Auto-Update] Successfully updated topic: ${topic.title} (${topic.topic_id})`);
-                            }
-                        }
+                        if (!topic.id) continue;
+                        const originalTopic = batch.find((candidate) => candidate.id === topic.id);
+                        const { error: proposalError } = await supabase
+                            .from('knowledge_review_queue')
+                            .insert({
+                                topic_id: topic.id,
+                                topic_name: topic.title || originalTopic?.title || 'Untitled topic',
+                                content: {
+                                    old_content: originalTopic?.clinical_content || null,
+                                    new_content: topic.clinical_content || null,
+                                    source_document: resourceTitle,
+                                    risk_flags: ['AI_GENERATED_REVIEW_REQUIRED'],
+                                },
+                                source: 'PERIODIC_AUDIT',
+                                reference: resourceTitle,
+                                trigger_query: 'scientist_surveillance',
+                                status: 'PENDING',
+                            });
+                        if (proposalError) console.error(`[Auto-Update] Error saving review proposal for ${topic.id}:`, proposalError);
+                        else totalProposals++;
                     }
                 }
             } catch (parseErr) {
@@ -100,7 +105,7 @@ async function autoReviewAndUpdateTopics(newTextContent, resourceTitle) {
             }
         }
         
-        console.log(`[Auto-Update] Complete. Total topics automatically revised: ${totalUpdated}`);
+        console.log(`[Auto-Update] Complete. Total review proposals queued: ${totalProposals}`);
 
     } catch (error) {
         console.error("[Auto-Update Error]", error);

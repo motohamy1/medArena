@@ -8,7 +8,7 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const aiModel = genAI ? genAI.getGenerativeModel({ 
-    model: 'gemini-flash-latest',
+    model: 'gemini-2.5-flash',
     generationConfig: {
         maxOutputTokens: 4096,
     }
@@ -55,9 +55,9 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
     // 1. Try Groq (Ultra-fast inference: 300+ tokens/sec, highly reliable models)
     if (GROQ_API_KEY) {
         const groqModels = [
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b"
+            "qwen/qwen3.8-27b",
+            "allam-2-7b",
+            "groq/compound-mini"
         ];
         const groqMessages = [
             { role: "system", content: systemPrompt },
@@ -97,15 +97,22 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
     }
 
     // 2. Try Native Gemini Flash API
-    if (aiModel) {
-        try {
-            const fullPrompt = `${systemPrompt}\n\n${historyTextSnippet}`;
-            const result = await aiModel.generateContent(fullPrompt);
-            const text = result.response.text();
-            if (text) return cleanText(text);
-        } catch (err) {
-            lastError = err;
-            console.warn(`[AI Router] Gemini failed: ${err.message.substring(0, 100)}...`);
+    if (genAI) {
+        const geminiModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
+        for (const geminiModelName of geminiModels) {
+            try {
+                const modelInstance = genAI.getGenerativeModel({
+                    model: geminiModelName,
+                    generationConfig: { maxOutputTokens: 4096 }
+                });
+                const fullPrompt = `${systemPrompt}\n\n${historyTextSnippet}`;
+                const result = await modelInstance.generateContent(fullPrompt);
+                const text = result.response.text();
+                if (text) return cleanText(text);
+            } catch (err) {
+                lastError = err;
+                console.warn(`[AI Router] Gemini ${geminiModelName} failed: ${err.message.substring(0, 100)}...`);
+            }
         }
     }
 

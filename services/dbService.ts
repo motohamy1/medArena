@@ -13,7 +13,7 @@ import {
 } from '../constants/SpecialtyData';
 import { Colors } from '../constants/Colors';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.6:3001';
 
 const ALL_SPECIALTY_IDS = Object.keys(SPECIALTY_KNOWLEDGE);
 

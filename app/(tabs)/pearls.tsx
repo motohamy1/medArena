@@ -365,7 +365,7 @@ export default function PearlsTab() {
             <View className="py-24 items-center justify-center">
               <ActivityIndicator size="small" color={Colors.main} />
               <Text className="text-gray-400 text-[12px] font-sans-medium mt-3">
-                Loading today's clinical pearls deck...
+                Loading today&apos;s clinical pearls deck...
               </Text>
             </View>
           ) : (
@@ -927,7 +927,7 @@ export default function PearlsTab() {
             </Text>
 
             <Text className="text-gray-400 font-sans text-[13px] text-center leading-5 mb-5">
-              You've used all{' '}
+              You&apos;ve used all{' '}
               <Text className="text-white font-sans-semibold">
                 3 free daily shuffles
               </Text>

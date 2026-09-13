@@ -6,10 +6,12 @@ const { hasApiKey } = require('./services/aiService');
 const chatRoutes = require('./routes/chatRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const AutonomousScientist = require('./services/autonomousScientistService');
+const { requestLogger } = require('./services/structuredLogger');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
 
 // Inject progress hook
 const { broadcastScientistProgress } = require('./routes/adminRoutes');
@@ -23,8 +25,9 @@ const PORT = process.env.PORT || 3001;
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// Chat endpoint
+// Chat endpoints
 app.use('/api/chat', chatRoutes);
+app.use('/api/chat/v2', require('./routes/chatV2Routes'));
 app.use('/api/admin', adminRoutes.router);
 app.use('/api/topics', require('./routes/topicRoutes'));
 
