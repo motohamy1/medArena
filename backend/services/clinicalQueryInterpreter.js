@@ -27,7 +27,13 @@ const ENGLISH_SYNONYMS = Object.freeze({
     research: 'research', study: 'research', trial: 'research',
 });
 
-const STOPWORDS = new Set('a an and are as at be been but by can could do does for from has have how i if in is it may me more my of on or please should tell that the their them there this to was we what when where which who why will with you'.split(' '));
+const STOPWORDS = new Set('a an and are as at be been but by can could do does for from has have how i if in is it may me more my of on or please should tell that the their them there this to was we what when where which who why will with you explain describe discuss'.split(' '));
+
+// Rare/long clinical terms (condition names, drugs) discriminate best across
+// sources; used to build focused fallback query variants.
+function rankSearchTerms(terms) {
+    return [...(terms || [])].sort((a, b) => b.length - a.length);
+}
 
 function detectLanguage(text) {
     return /[\u0600-\u06ff]/.test(text) ? 'ar-EG' : 'en';
@@ -60,7 +66,7 @@ function interpretClinicalQuery(message, history = []) {
     const text = String(message || '').trim();
     if (!text) throw Object.assign(new Error('Clinical question is empty'), { code: 'QUERY_PARSE_ERROR' });
     const normalized = normalizeText(text);
-    const tokens = normalized.split(' ').filter((token) => token.length > 2 && !STOPWORDS.has(token));
+    const tokens = normalized.split(' ').filter((token) => token.length > 2 && !STOPWORDS.has(token) && !/^\d+$/.test(token));
     const terms = [];
     const entities = [];
     for (const [alias, mapping] of Object.entries(EGYPTIAN_TERMS)) {
@@ -95,4 +101,4 @@ function interpretClinicalQuery(message, history = []) {
     };
 }
 
-module.exports = { EGYPTIAN_TERMS, interpretClinicalQuery, normalizeText, detectLanguage };
+module.exports = { EGYPTIAN_TERMS, interpretClinicalQuery, normalizeText, detectLanguage, rankSearchTerms };

@@ -1,0 +1,19 @@
+{
+  "description": "Med Arena retrieval benchmark gold set (spec §66). Starter seeds; grow to 100-300 queries. expected_status: VERIFIED|PARTIAL means the pipeline must NOT abstain with NO_EVIDENCE; abstain means NO_EVIDENCE is the correct outcome.",
+  "queries": [
+    { "id": "guideline_001", "q": "What is the current first-line treatment for helicobacter pylori?", "category": "guideline", "expected_status": "VERIFIED", "expected_source_types": ["guideline", "literature"] },
+    { "id": "guideline_002", "q": "Explain the Tokyo Guidelines 2018 diagnostic criteria and severity grading for Acute Cholangitis, empiric antibiotics, and urgent biliary drainage timing.", "category": "guideline", "expected_status": "PARTIAL", "expected_source_types": ["guideline", "literature"] },
+    { "id": "dose_001", "q": "Pediatric paracetamol dose for a child aged 4 years and weight 16 kg", "category": "dosing", "expected_status": "PARTIAL", "expected_source_types": ["regulatory", "guideline", "literature"] },
+    { "id": "contraindication_001", "q": "Can diclofenac be given to a patient with peptic ulcer?", "category": "contraindication", "expected_status": "PARTIAL", "expected_source_types": ["regulatory", "guideline", "literature"] },
+    { "id": "diagnosis_001", "q": "Diagnostic criteria and workup of acute pancreatitis", "category": "diagnosis", "expected_status": "PARTIAL", "expected_source_types": ["guideline", "literature"] },
+    { "id": "emergency_001", "q": "Initial management of anaphylaxis in adults", "category": "emergency", "expected_status": "PARTIAL", "expected_source_types": ["guideline", "literature"] },
+    { "id": "latest_001", "q": "Latest evidence on SGLT2 inhibitors in heart failure 2025", "category": "latest_evidence", "expected_status": "PARTIAL", "expected_source_types": ["literature"] },
+    { "id": "pregnancy_001", "q": "Is ciprofloxacin safe in pregnancy?", "category": "pregnancy", "expected_status": "PARTIAL", "expected_source_types": ["regulatory", "literature"] },
+    { "id": "renal_001", "q": "Metformin dose adjustment in renal impairment", "category": "renal", "expected_status": "PARTIAL", "expected_source_types": ["regulatory", "guideline"] },
+    { "id": "egyptian_001", "q": "علاج جرثومة المعدة", "category": "egyptian_arabic", "expected_status": "PARTIAL", "expected_source_types": ["literature"] },
+    { "id": "abstain_001", "q": "treatment protocol for frumious bandersnatch syndrome", "category": "adverse", "expected_status": "abstain", "expected_source_types": [] },
+    { "id": "research_001", "q": "Recent randomized trials on GLP-1 agonists and cardiovascular outcomes", "category": "research", "expected_status": "PARTIAL", "expected_source_types": ["literature", "trial_registry"] },
+    { "id": "brand_001", "q": "Dose of Augmentin 1g for adult sinusitis", "category": "dosing", "expected_status": "PARTIAL", "expected_source_types": ["regulatory", "literature"] },
+    { "id": "followup_001", "q": "what about alternative regimens?", "category": "follow_up", "expected_status": "PARTIAL", "history": ["treatment of helicobacter pylori", "First-line therapy is bismuth quadruple therapy for 14 days."], "expected_source_types": ["guideline", "literature"] }
+  ]
+}

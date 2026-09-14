@@ -1,4 +1,14 @@
 const SOURCE_REGISTRY = Object.freeze({
+    internal_knowledge: {
+        id: 'internal_knowledge',
+        name: 'Med Arena Curated Knowledge',
+        type: 'guideline',
+        tier: 1,
+        authorityScore: 1,
+        jurisdictions: ['international'],
+        capabilities: ['guideline', 'recommendation', 'vector_search'],
+        enabled: true,
+    },
     who: {
         id: 'who',
         name: 'WHO',

@@ -702,10 +702,11 @@ function getOfflineFallbackReply(query: string): { reply: string; citations: Cit
 
 export const aiService = {
   /**
-   * Sends a message with 3-tier fallback, now with full RAG grounding:
-   * 1. Remote Express backend (if online and configured)
-   * 2. Direct Gemini / Groq Cloud API with RAG context
-   * 3. Offline Bundled Clinical Knowledge Base
+   * Sends a message through the evidence-first pipeline (spec §49 Stage C):
+   * 1. Remote Express evidence backend (only path for clinical answers)
+   * 2. Bundled curated knowledge base — clearly labeled, no model calls
+   * Direct client-side provider calls were removed from the chat path so the
+   * backend evidence policy cannot be bypassed (spec §0.7, §1.2-11).
    */
   async sendMessageByText(
     message: string,
@@ -736,13 +737,40 @@ export const aiService = {
       };
     }
 
-    if (!USE_BACKEND || !BACKEND_URL) {
+    const offlineKnowledgeReply = (): { reply: string; citations: Citation[]; suggestions: string[]; sourceType: string } => {
+      const { context, sources } = findLocalContextFuzzy(normalizedMessage);
+      if (!context) {
+        return {
+          reply: 'The evidence service could not be reached right now, so I cannot verify this answer safely.',
+          citations: [],
+          suggestions: [],
+          sourceType: 'system_failure',
+        };
+      }
+      const citations: Citation[] = sources.slice(0, 5).map((src, idx) => ({
+        id: (idx + 1).toString(),
+        title: src.title,
+        author: src.guidelineSociety || src.author || 'Clinical Guideline Committee',
+        journal: src.journal || 'Evidence-Based Practice',
+        year: src.year || '2024',
+        url: src.url || 'https://pubmed.ncbi.nlm.nih.gov/',
+      }));
+      const titleMatch = context.match(/VERIFIED CLINICAL PROTOCOL[^:]*:\s*([^\]]+)\]/);
+      const topicTitle = titleMatch ? titleMatch[1].trim() : normalizedMessage;
       return {
-        reply: 'The clinical evidence service is not configured for this build, so I cannot verify this answer safely.',
-        citations: [],
-        suggestions: [],
-        sourceType: 'system_failure',
+        reply: `##GREETING##\nThe evidence service is unreachable, so this comes from the bundled Clinical Knowledge Base for **${topicTitle}** (offline mode — not live-verified):\n##END##\n\n${context}`,
+        citations,
+        suggestions: [
+          `What are the first-line dosages for ${topicTitle}?`,
+          `Contraindications and high-risk pitfalls in ${topicTitle}`,
+          `Stepwise escalation protocol for refractory cases`,
+        ],
+        sourceType: 'offline_knowledge',
       };
+    };
+
+    if (!USE_BACKEND || !BACKEND_URL) {
+      return offlineKnowledgeReply();
     }
 
     try {
@@ -778,12 +806,7 @@ export const aiService = {
         limitations: data.limitations,
       } as any;
     } catch {
-      return {
-        reply: 'The evidence service could not be reached right now, so I cannot verify this answer safely.',
-        citations: [],
-        suggestions: [],
-        sourceType: 'system_failure',
-      };
+      return offlineKnowledgeReply();
     }
   },
 
