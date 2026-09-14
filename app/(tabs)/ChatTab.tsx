@@ -547,7 +547,9 @@ const ChatBubble: React.FC<{
               </View>
             )}
 
-            {message.citations && message.citations.length > 0 && (
+            {message.citations &&
+              message.citations.length > 0 &&
+              ['VERIFIED', 'PARTIAL', 'CONFLICTING'].includes(message.sourceType || '') && (
               <View className="mt-3.5 pt-3 border-t border-white/5">
                 <View className="flex-row items-center gap-1.5 mb-2 ml-1">
                   <Ionicons name="book-outline" size={13} color={Colors.lavender} />
@@ -886,7 +888,7 @@ const ChatTab = () => {
     persistCurrentMessages(currentHistory);
 
     try {
-      const { reply, citations, suggestions } = await aiService.sendMessageByText(
+      const { reply, citations, suggestions, sourceType } = await aiService.sendMessageByText(
         textToSend,
         "general",
         params.specialtyId as any,
@@ -902,6 +904,7 @@ const ChatTab = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         citations,
         suggestions,
+        sourceType,
       };
 
       const finalHistory = [...currentHistory, aiMessage];

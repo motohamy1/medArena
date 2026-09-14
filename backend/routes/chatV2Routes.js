@@ -6,8 +6,13 @@ const { createRetrievalPlan } = require('../services/retrievalPlanner');
 const { retrieveEvidence } = require('../services/evidenceRetrievalService');
 const { assessEvidenceSufficiency } = require('../services/evidenceSufficiencyService');
 const { composeEvidenceAnswer } = require('../services/clinicalAnswerComposer');
-const { createAbstentionResponse } = require('../models/responseContracts');
+const { createAbstentionResponse, buildResponseContract } = require('../models/responseContracts');
 const { logEvent } = require('../services/structuredLogger');
+
+// Pure greetings carry no clinical question; running them through evidence
+// retrieval produces irrelevant registry noise (spec §34: don't dress
+// conversation as evidence-grounded clinical guidance).
+const GREETING_PATTERN = /^(hi+|hello+|hey+|good\s*(morning|afternoon|evening)|سلام|اهلا|أهلا|هاي)[!.,\s]*$/i;
 
 function buildEvidenceContext(evidence) {
     return evidence.map((item, index) => `[SOURCE ${index + 1} | id=${item.id} | title=${item.title} | url=${item.url || ''}]\n${item.excerpt || item.content}\n[END SOURCE ${index + 1}]`).join('\n\n');
@@ -21,6 +26,13 @@ router.post('/', async (req, res) => {
     const requestId = req.requestId || `req_${Date.now()}`;
     const { message, history = [] } = req.body || {};
     if (!message) return res.status(400).json({ error: 'message is required', code: 'QUERY_PARSE_ERROR', request_id: requestId });
+    if (GREETING_PATTERN.test(String(message).trim())) {
+        return res.json(buildResponseContract({
+            answer: { type: 'conversation', text: 'Hello! How can I help you with a clinical question today?', sections: [] },
+            evidence: { status: 'PARTIAL', freshness: 'current', sufficiency_score: null },
+            query_metadata: { intent: 'conversation' },
+        }));
+    }
     try {
         logEvent(requestId, 'interpretation_started');
         const query = interpretClinicalQuery(message, history);

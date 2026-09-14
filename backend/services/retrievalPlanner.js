@@ -13,7 +13,9 @@ function createRetrievalPlan(query, sessionState = {}) {
         if (source?.enabled) plans.push({ source_family: sourceFamily, source_id: sourceId, queries, max_candidates: maxCandidates });
     };
     if (['guideline_question', 'clinical_management', 'diagnosis_question', 'drug_question', 'latest_evidence', 'complex_case', 'follow_up'].includes(intent)) {
-        addPlan('guidelines', 'who', [baseQuery + ' guideline', ...terms.slice(0, 3)], 20);
+        // Only plan sources with implemented adapters; unimplemented registry entries
+        // silently return nothing and dilute the candidate pool (spec §75).
+        addPlan('guidelines', 'europe_pmc', [baseQuery + ' guideline', ...terms.slice(0, 3)], 20);
         addPlan('literature', 'europe_pmc', [baseQuery], 15);
     }
     if (['research_question', 'latest_evidence', 'complex_case'].includes(intent)) {
@@ -22,7 +24,6 @@ function createRetrievalPlan(query, sessionState = {}) {
     }
     if (intent === 'drug_question' || query.medications?.length) {
         addPlan('regulatory', 'fda', [baseQuery + ' label warnings'], 10);
-        addPlan('regulatory', 'ema', [baseQuery + ' product information'], 10);
     }
     return {
         intent,

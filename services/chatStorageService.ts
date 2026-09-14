@@ -9,6 +9,7 @@ export interface ChatMessage {
   category?: DoctorCategory;
   citations?: Citation[];
   suggestions?: string[];
+  sourceType?: string;
   isError?: boolean;
   failedQuery?: string;
 }

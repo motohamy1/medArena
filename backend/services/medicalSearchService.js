@@ -59,33 +59,51 @@ function isRelevantLiterature(ref, queryKeywords) {
     return matches.length >= Math.min(2, tokens.length);
 }
 
-async function fetchClinicalLiterature(query, specialtyId) {
+async function fetchClinicalLiterature(query, specialtyId, options = {}) {
+    const { broad = false } = options;
     try {
         // Sanitize specialtyId: Ignore generic user roles like 'physicians', 'dentists', 'nurses', 'general'
         const validSpecialties = ['cardiology', 'pulmonology', 'gastroenterology', 'neurology', 'pediatrics', 'dermatology', 'infectious', 'endocrinology', 'nephrology', 'oncology', 'rheumatology'];
         const isSpecificSpecialty = specialtyId && validSpecialties.includes(specialtyId.toLowerCase());
         let categoryFilter = isSpecificSpecialty ? ` AND (${specialtyId})` : '';
-        let evidenceFilter = '(PUB_TYPE:"Systematic Review" OR PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Practice Guideline" OR PUB_TYPE:"Review" OR PUB_TYPE:"Clinical Trial")';
+        let evidenceFilter = broad ? '' : '(PUB_TYPE:"Systematic Review" OR PUB_TYPE:"Meta-Analysis" OR PUB_TYPE:"Practice Guideline" OR PUB_TYPE:"Review" OR PUB_TYPE:"Clinical Trial")';
 
         // 1. Europe PMC (Aggregates PubMed, PMC, Guidelines, Systematic Reviews)
         const fetchPMC = async (sortParam, isRecentOnly = false) => {
             try {
                 const currentYear = new Date().getFullYear();
-                const yearFilter = isRecentOnly ? ` AND (PUB_YEAR:[${currentYear - 2} TO ${currentYear}])` : '';
+                const yearFilter = isRecentOnly && !broad ? ` AND (PUB_YEAR:[${currentYear - 2} TO ${currentYear}])` : '';
                 // Ensure query terms are clean and not enclosed in broken syntax
                 const cleanQuery = query.replace(/[()]/g, ' ').trim();
-                const enhancedQuery = `(${cleanQuery})${categoryFilter} AND ${evidenceFilter}${yearFilter}`;
+                const enhancedQuery = `(${cleanQuery})${categoryFilter}${evidenceFilter ? ` AND ${evidenceFilter}` : ''}${yearFilter}`;
                 const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
                 url.searchParams.append('query', enhancedQuery);
                 url.searchParams.append('format', 'json');
                 url.searchParams.append('resultType', 'core');
                 url.searchParams.append('pageSize', '4');
-                url.searchParams.append('sort', sortParam);
-                
+                // Europe PMC's default ranking is relevance — measurably better for clinical
+                // queries than date/citation sorting, which surfaces tangential full-text
+                // matches. Recency intent is enforced by the PUB_YEAR filter instead.
+                // An invalid sort value also makes the API return a version-only stub.
+                if (sortParam) url.searchParams.append('sort', sortParam);
+
                 const response = await fetch(url.toString());
                 if (!response.ok) return [];
                 const data = await response.json();
                 const results = data.resultList?.result || [];
+                if (!results.length && (data.hitCount === undefined || data.hitCount > 0)) {
+                    // A stub response ({"version":...} without resultList) means the request was
+                    // rejected or throttled; retry once unsorted before giving up.
+                    const retryUrl = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
+                    retryUrl.searchParams.append('query', enhancedQuery);
+                    retryUrl.searchParams.append('format', 'json');
+                    retryUrl.searchParams.append('resultType', 'core');
+                    retryUrl.searchParams.append('pageSize', '4');
+                    const retryResponse = await fetch(retryUrl.toString());
+                    if (!retryResponse.ok) return [];
+                    const retryData = await retryResponse.json();
+                    results.push(...(retryData.resultList?.result || []));
+                }
                 
                 return results.map(r => ({
                     source: 'Europe PMC / PubMed',
@@ -158,8 +176,8 @@ async function fetchClinicalLiterature(query, specialtyId) {
         };
 
         const [pmcLatest, pmcFoundational, trials, fda] = await Promise.all([
-            fetchPMC('P_PD_D desc', true), // Explicit recent 2024+ sort
-            fetchPMC('CITED desc', false),  // Foundational consensus
+            fetchPMC(null, true), // Relevance-ranked within the 2024+ year filter
+            fetchPMC(null, false), // Relevance-ranked foundational consensus
             fetchTrials(),
             fetchFDA()
         ]);

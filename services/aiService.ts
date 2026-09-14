@@ -1,9 +1,12 @@
 import { SPECIALTY_KNOWLEDGE } from '../constants/SpecialtyData';
 import type { TopicSearchResult } from '../constants/SpecialtyData';
 
-// Hardcoded fallbacks ensure keys survive local Gradle release builds
-// where process.env.EXPO_PUBLIC_* is NOT injected from .env.
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_API_URL || '';
+// Keep the public backend available in locally generated Gradle release builds
+// where process.env.EXPO_PUBLIC_* may not be injected from .env.
+const BACKEND_URL =
+  process.env.EXPO_PUBLIC_BACKEND_URL ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  'https://medarena-33zm.onrender.com';
 
 const GEMINI_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
@@ -721,6 +724,17 @@ export const aiService = {
     sources?: unknown[];
     limitations?: string[];
   }> {
+    const normalizedMessage = message.replace(/\bhylobacter\b/gi, 'helicobacter');
+    const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|سلام|اهلا|أهلا)[!.,\s]*$/i.test(message.trim());
+
+    if (isGreeting) {
+      return {
+        reply: 'Hello! How can I help you with a clinical question today?',
+        citations: [],
+        suggestions: [],
+        sourceType: 'conversation',
+      };
+    }
 
     if (!USE_BACKEND || !BACKEND_URL) {
       return {
@@ -733,11 +747,13 @@ export const aiService = {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      // Backend performs multi-source evidence retrieval and may cold-start
+      // (Render free tier); 10s aborted healthy requests mid-retrieval.
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
       const response = await fetch(`${BACKEND_URL}/api/chat/v2`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, mode, category, topicId, categoryContext, history }),
+        body: JSON.stringify({ message: normalizedMessage, mode, category, topicId, categoryContext, history }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
