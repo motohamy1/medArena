@@ -7,8 +7,12 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 1,
         jurisdictions: ['international'],
         capabilities: ['guideline', 'recommendation', 'vector_search'],
+        implemented: true,
         enabled: true,
     },
+    // Spec §19/§80: a registry entry is NOT an integration. These have no
+    // retrieval adapters yet — `implemented: false` keeps the registry honest;
+    // the planner only plans sources with real adapters.
     who: {
         id: 'who',
         name: 'WHO',
@@ -17,7 +21,8 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 1,
         jurisdictions: ['international'],
         capabilities: ['guideline', 'recommendation', 'surveillance'],
-        enabled: true,
+        implemented: false,
+        enabled: false,
     },
     nice: {
         id: 'nice',
@@ -27,7 +32,8 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 1,
         jurisdictions: ['UK', 'international'],
         capabilities: ['guideline', 'recommendation', 'surveillance'],
-        enabled: true,
+        implemented: false,
+        enabled: false,
     },
     cdc: {
         id: 'cdc',
@@ -37,7 +43,8 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 1,
         jurisdictions: ['US', 'international'],
         capabilities: ['guideline', 'recommendation', 'surveillance'],
-        enabled: true,
+        implemented: false,
+        enabled: false,
     },
     fda: {
         id: 'fda',
@@ -47,6 +54,7 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 1,
         jurisdictions: ['US'],
         capabilities: ['label', 'warning', 'safety'],
+        implemented: true,
         enabled: true,
     },
     ema: {
@@ -57,7 +65,8 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 1,
         jurisdictions: ['EU', 'international'],
         capabilities: ['label', 'warning', 'safety'],
-        enabled: true,
+        implemented: false,
+        enabled: false,
     },
     mhra: {
         id: 'mhra',
@@ -67,7 +76,8 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 1,
         jurisdictions: ['UK'],
         capabilities: ['safety', 'alert'],
-        enabled: true,
+        implemented: false,
+        enabled: false,
     },
     pubmed: {
         id: 'pubmed',
@@ -77,6 +87,7 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 0.85,
         jurisdictions: ['international'],
         capabilities: ['search', 'article_metadata', 'abstract'],
+        implemented: true,
         enabled: true,
     },
     europe_pmc: {
@@ -87,6 +98,7 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 0.85,
         jurisdictions: ['international'],
         capabilities: ['search', 'article_metadata', 'abstract'],
+        implemented: true,
         enabled: true,
     },
     clinicaltrials_gov: {
@@ -97,6 +109,7 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 0.7,
         jurisdictions: ['international'],
         capabilities: ['trial_discovery', 'emerging_evidence'],
+        implemented: true,
         enabled: true,
     },
     huggingface_medical_reasoning: {
@@ -107,6 +120,7 @@ const SOURCE_REGISTRY = Object.freeze({
         authorityScore: 0.1,
         jurisdictions: ['international'],
         capabilities: ['discovery'],
+        implemented: true,
         enabled: false,
     },
 });
