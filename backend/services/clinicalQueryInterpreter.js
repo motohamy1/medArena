@@ -332,16 +332,17 @@ function extractPatientAttributes(normalized, mask, terms) {
 // Intent & complexity (spec §12/§52)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function detectComparison(normalized) {
+function detectComparison(normalized, resolvedDrugClasses = []) {
     const pattern = /\b(vs|versus|better than|or)\b.{0,40}\b(which|better|prefer)\b|احسن\s+ولا|أفضل\s+ولا|ولا\s+\w+\s+احسن|افضل\s+ولا|أحسن\s+ولا/;
     if (!pattern.test(normalized)) return null;
-    // capture the two compared drug classes/drugs if present
-    const classes = [];
-    for (const concept of ['calcium channel blocker', 'thiazide', 'arb', 'ace inhibitor', 'beta blocker', 'diuretic']) {
-        const short = concept.split(' ')[0];
-        if (new RegExp(`\\b${short}`).test(normalized)) classes.push(concept);
-    }
-    return { type: 'treatment_comparison', entities: classes.slice(0, 2) };
+    // Comparison entities come from RESOLVED drug classes (spec §86) — never
+    // re-scanned from raw text (CCB is an abbreviation; scanning raw text
+    // missed it and paired thiazide with its own superclass "diuretic").
+    let entities = resolvedDrugClasses.slice();
+    // Drop superclass duplicates: thiazide IS a diuretic; keep the specific
+    // class so the comparison is meaningful (thiazide vs CCB, not vs itself).
+    if (entities.includes('thiazide')) entities = entities.filter((e) => e !== 'diuretic');
+    return { type: 'treatment_comparison', entities: entities.slice(0, 2) };
 }
 
 function classifyIntent(text, normalizedTerms, history) {
@@ -487,7 +488,7 @@ function interpretClinicalQuery(message, history = []) {
 
     // 9. Intent & comparison
     let intent = classifyIntent(text, terms, history);
-    const comparison = detectComparison(normalized);
+    const comparison = detectComparison(normalized, drugClasses);
     if (comparison && ['clinical_management', 'guideline_question', 'complex_case'].includes(intent)) intent = 'guideline_question';
     if (isFollowUp && comparison) intent = 'guideline_question'; // follow-up comparison still needs comparative evidence
 
