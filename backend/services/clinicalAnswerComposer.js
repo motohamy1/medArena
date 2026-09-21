@@ -79,4 +79,4 @@ function composeEvidenceAnswer({ query, evidence = [], sufficiency, conflicts = 
     });
 }
 
-module.exports = { composeEvidenceAnswer };
+module.exports = { composeEvidenceAnswer, stripUnsupportedClaims };

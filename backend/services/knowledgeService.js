@@ -2,12 +2,21 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
-// For text embeddings, use gemini-embedding model (text-embedding-004 is recommended)
-const embeddingModel = genAI.getGenerativeModel({ model: 'gemini-embedding-2' });
+// For text embeddings, use the gemini-embedding model (3072 dims, matches the
+// custom_knowledge.embedding vector(3072) schema).
+const embeddingModel = genAI ? genAI.getGenerativeModel({ model: 'gemini-embedding-2' }) : null;
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+// Lazy Supabase client: module must be loadable without credentials (tests,
+// tooling). Client creation throws on missing URL, so defer it.
+let supabase = null;
+function getSupabase() {
+    if (!supabase && process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+        supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+    }
+    return supabase;
+}
 
 /**
  * Generate an embedding vector for a piece of text. Throws on failure so the
@@ -15,6 +24,11 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
  * (spec §61/§95: silent [] return is prohibited at the retrieval boundary).
  */
 async function generateEmbedding(text) {
+    if (!embeddingModel) {
+        const error = new Error('Embedding provider not configured (GEMINI_API_KEY missing)');
+        error.code = 'EMBEDDING_FAILURE';
+        throw error;
+    }
     const result = await embeddingModel.embedContent(text);
     return result.embedding.values;
 }
@@ -36,7 +50,7 @@ async function searchInternalKnowledgeLexical(queryText, matchCount = 5) {
     const ranked = tokens.sort((a, b) => b.length - a.length).slice(0, 4);
     if (!ranked.length) return [];
     const filter = ranked.map((token) => `content.ilike.%${token}%,title.ilike.%${token}%`).join(',');
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
         .from('custom_knowledge')
         .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
         .eq('is_active', true)
@@ -71,7 +85,7 @@ async function searchInternalKnowledge(queryText, matchCount = 5, matchThreshold
     // 1. Vector path
     try {
         const queryEmbedding = await generateEmbedding(queryText);
-        const { data, error } = await supabase.rpc('match_custom_knowledge', {
+        const { data, error } = await getSupabase().rpc('match_custom_knowledge', {
             query_embedding: queryEmbedding,
             match_threshold: matchThreshold,
             match_count: matchCount,
@@ -102,7 +116,7 @@ async function searchInternalKnowledge(queryText, matchCount = 5, matchThreshold
         const probe = String(queryText || '').split(/\s+/).filter((token) => token.length > 5)[0];
         if (probe) {
             try {
-                const { data, error } = await supabase
+                const { data, error } = await getSupabase()
                     .from('custom_knowledge')
                     .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
                     .eq('is_active', true)
@@ -138,7 +152,7 @@ async function searchCustomKnowledge(queryText, match_count = 5, match_threshold
     if (!query_embedding) return [];
 
     // 2. Call the Supabase Postgres function
-    const { data, error } = await supabase.rpc('match_custom_knowledge', {
+    const { data, error } = await getSupabase().rpc('match_custom_knowledge', {
         query_embedding,
         match_threshold,
         match_count
@@ -205,7 +219,7 @@ async function ingestKnowledge(title, text, sourceUrl = '', onProgress = null, m
         const promises = batch.map(async (chunk) => {
             const embedding = await generateEmbedding(chunk);
             if (embedding) {
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('custom_knowledge')
                     .insert({
                         title,

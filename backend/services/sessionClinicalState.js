@@ -29,7 +29,10 @@ function extractSessionClinicalState(history = [], message = '') {
     const female = /\b(female|woman|lady|she|her)\b|مريضة|انثى|أنثى/.test(scanText);
     const male = /\b(male|man)\b|مريض(?!ة)/.test(scanText);
     const sex = female && !male ? 'female' : male && !female ? 'male' : null;
-    const pregnancy = /\bpregnant\b|\bpregnancy\b|حامل|الحمل/.test(scanText) || null;
+    // Negation-aware pregnancy: "مش حامل" / "not pregnant" is an explicit
+    // negative, not an absence of information (spec §8).
+    const pregnancyNegated = /(?:مش|مفيش|ليس|لا)\s+حامل|not\s+pregnant|no\s+pregnancy/.test(scanText);
+    const pregnancy = pregnancyNegated ? false : (/\bpregnant\b|\bpregnancy\b|حامل|الحمل/.test(scanText) || null);
     const obesity = /\bobes|سمنة|وزن.{0,10}(زيادة|زايد|كثير)/.test(scanText) || null;
     const renal = /\b(ckd|renal failure|renal impairment|kidney (failure|disease|impairment))\b|فشل كلوي|قصر الكلى/.test(scanText) || null;
     const hepatic = /\b(cirrhosis|hepatic impairment|liver (failure|disease))\b|تليف الكبد|فشل كبدي/.test(scanText) || null;

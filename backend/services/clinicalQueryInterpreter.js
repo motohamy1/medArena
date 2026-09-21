@@ -300,7 +300,8 @@ function extractLabValues(text) {
 
 function extractPatientAttributes(normalized, mask, terms) {
     const { tokens } = mask;
-    const isNegated = (index) => (index >= 0 ? mask[index] : false);
+    // mask.mask is the boolean array; the mask object itself only carries tokens+mask.
+    const isNegated = (index) => (index >= 0 ? mask.mask[index] === true : false);
     const findTokenIndex = (regex) => tokens.findIndex((token) => regex.test(token));
 
     const female = /\b(female|woman|lady|she|her)\b|مريضة|انثى|أنثى|سيدت/.test(normalized);
@@ -471,7 +472,7 @@ function interpretClinicalQuery(message, history = []) {
 
     // 7. Temporal request — FIXED (V2 always forced 'current'). Only explicit
     // recency language yields 'current'; historical questions yield 'historical'.
-    const historical = /\b(in 19\d0|in 20\d0|historical|old guideline|previously recommended)\b/.test(normalized);
+    const historical = /\b(?:in|during|from)\s+(19|20)\d{2}\b|\bhistorical\b|old guideline|previously recommended/.test(normalized);
     const temporal_request = TEMPORAL_CURRENT.test(text) ? 'current' : historical ? 'historical' : 'not_specified';
 
     // 8. Hypertension derivation (transparent, spec §84): a stated BP reading

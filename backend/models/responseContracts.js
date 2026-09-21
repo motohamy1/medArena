@@ -36,7 +36,7 @@ function createClarificationResponse({ clarification, queryMetadata = {}, checke
     return buildResponseContract({
         answer: { type: 'clarification', text: question, sections: [] },
         evidence: { status: 'CLARIFICATION_REQUIRED', checked_at: checkedAt, freshness: 'unknown', sources_used: 0, primary_source_id: null, sufficiency_score: 0 },
-        claims: [], sources: [], conflicts: [], limitations: ['ambiguous_clinical_term'], query_metadata: query_metadata,
+        claims: [], sources: [], conflicts: [], limitations: ['ambiguous_clinical_term'], query_metadata: queryMetadata,
     });
 }
 

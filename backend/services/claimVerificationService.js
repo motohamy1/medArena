@@ -62,18 +62,14 @@ function verifyClaim(claim, evidence = [], conflicts = [], queryContextText = ''
         return { ...claim, support_level: 'UNSUPPORTED', source_ids: [], reason: 'unsupported_numbers' };
     }
     const best = matches[0];
-    const metadataOnly = best.item.evidence_depth === 'metadata_only';
+    const isMetadataOnly = best.item.evidence_depth === 'metadata_only';
     const requiredRatio = isHighRisk ? 0.6 : 0.5;
     // Title-only records cap out at INDIRECT support (spec §20).
     let level;
-    if (best.ratio >= requiredRatio && !metadataOnly(best.item)) level = 'SUPPORTED_DIRECT';
+    if (best.ratio >= requiredRatio && !isMetadataOnly) level = 'SUPPORTED_DIRECT';
     else level = 'SUPPORTED_INDIRECT';
     if (isHighRisk && best.ratio < 0.5) level = 'UNSUPPORTED';
     return { ...claim, support_level: level, source_ids: matches.map((match) => match.item.id).filter(Boolean), high_risk: isHighRisk };
-}
-
-function metadataOnly(item) {
-    return item?.evidence_depth === 'metadata_only';
 }
 
 function verifyClaims(claims, evidence, conflicts = [], queryContextText = '') {
