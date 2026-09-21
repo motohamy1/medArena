@@ -116,6 +116,19 @@ test('metadata-only evidence cannot directly support claims (§20)', () => {
     assert.notEqual(verified[0].support_level, 'SUPPORTED_DIRECT');
 });
 
+// ── Hybrid semantic verification (§25) ──
+test('hybrid: semantic rescue works, but never for high-risk claims', async () => {
+    const { verifyClaimsHybrid } = require('../services/claimVerificationService');
+    const evidence = [{ id: 'ev2', title: 'Pregnancy hypertension', content: 'Labetalol and nifedipine are preferred antihypertensives in pregnancy.', evidence_depth: 'full' }];
+    const right = [{ id: 'c3', text: 'Labetalol is a preferred antihypertensive in pregnancy.' }];
+    const wrong = [{ id: 'c2', text: 'Beta blockers are the preferred first-line agents in pregnancy hypertension.' }];
+    const rightResult = await verifyClaimsHybrid(right, evidence, [], '');
+    const wrongResult = await verifyClaimsHybrid(wrong, evidence, [], '');
+    assert.equal(rightResult.claims[0].support_level, 'SUPPORTED_DIRECT');
+    assert.equal(rightResult.diagnostics.semantic_verification, 'embedding');
+    assert.equal(wrongResult.claims[0].support_level, 'UNSUPPORTED'); // high-risk: semantics never rescues
+});
+
 test('extractNumbers', () => {
     assert.deepEqual(extractNumbers('dose 5 mg twice, BP 160/90'), [5, 160, 90]);
 });

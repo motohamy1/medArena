@@ -216,7 +216,7 @@ router.post('/', async (req, res) => {
             const abstention = createAbstentionResponse({ status: 'SYSTEM_FAILURE', queryMetadata: query, limitations: ['model_provider_unavailable'], retryable: true });
             return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
         }
-        const response = composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState, coverage });
+        const response = await composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState, coverage });
         // Spec §33/§35: stale cached evidence is labeled, never passed as live.
         if (cacheHit && cacheHit.stale && !response.limitations.includes('cached_evidence_not_live_refreshed')) {
             response.limitations.push('cached_evidence_not_live_refreshed');

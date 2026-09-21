@@ -1,6 +1,6 @@
 const { createAbstentionResponse, buildResponseContract } = require('../models/responseContracts');
 const { extractMaterialClaims } = require('./claimExtractionService');
-const { verifyClaims } = require('./claimVerificationService');
+const { verifyClaims, verifyClaimsHybrid } = require('./claimVerificationService');
 
 function buildEvidenceSource(item) {
     if (!item.id || !item.title || !(item.url || item.pmid || item.doi)) return null;
@@ -41,7 +41,7 @@ function stripUnsupportedClaims(draftText, claims) {
     return { text, removedCount: unsupported.length };
 }
 
-function composeEvidenceAnswer({ query, evidence = [], sufficiency, conflicts = [], limitations = [], draftText, provider, sessionState, coverage = [] }) {
+async function composeEvidenceAnswer({ query, evidence = [], sufficiency, conflicts = [], limitations = [], draftText, provider, sessionState, coverage = [] }) {
     if (!sufficiency || ['NO_EVIDENCE', 'NO_RELEVANT_EVIDENCE', 'SOURCE_UNAVAILABLE', 'SYSTEM_FAILURE', 'OUTDATED'].includes(sufficiency.status)) {
         return createAbstentionResponse({ status: sufficiency.status || 'NO_RELEVANT_EVIDENCE', queryMetadata: query, limitations: sufficiency.missing || limitations });
     }
@@ -49,7 +49,8 @@ function composeEvidenceAnswer({ query, evidence = [], sufficiency, conflicts = 
     // Numerical/query context feeds the numeric-consistency check (spec §29):
     // numbers stated by the user are legitimate answer material.
     const queryContextText = [query.raw_query, JSON.stringify(query.clinical_measurements || {}), JSON.stringify(query.patient || {})].join(' ');
-    const verifiedClaims = verifyClaims(extractMaterialClaims(draftText || ''), evidence, conflicts, queryContextText);
+    // Hybrid verification (spec §25): token overlap + semantic similarity.
+    const { claims: verifiedClaims, diagnostics: verificationDiagnostics } = await verifyClaimsHybrid(extractMaterialClaims(draftText || ''), evidence, conflicts, queryContextText);
     const { text: cleanedDraft, removedCount } = stripUnsupportedClaims(draftText, verifiedClaims);
     const claims = verifiedClaims.filter((claim) => claim.support_level !== 'UNSUPPORTED');
     const unsupportedLimitation = removedCount > 0 ? 'unverified_claims_removed_from_answer' : null;
@@ -75,7 +76,7 @@ function composeEvidenceAnswer({ query, evidence = [], sufficiency, conflicts = 
             ...(partialCoverage ? ['some_sub_questions_not_covered_by_retrieved_evidence'] : []),
             ...(provider ? [] : ['model_provider_not_recorded']),
         ].filter(Boolean),
-        query_metadata: { ...query, provider: provider || null, patient_context: sessionState || null, coverage },
+        query_metadata: { ...query, provider: provider || null, patient_context: sessionState || null, coverage, verification: verificationDiagnostics },
     });
 }
 

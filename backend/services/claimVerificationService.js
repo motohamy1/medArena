@@ -11,6 +11,68 @@
 
 const SUPPORT_LEVELS = Object.freeze(['SUPPORTED_DIRECT', 'SUPPORTED_INDIRECT', 'CONFLICTING', 'UNSUPPORTED']);
 
+// Spec §25: semantic similarity via the Gemini embedding provider, in ADDITION
+// to token overlap. Evidence embeddings are cached per item id (bounded) so
+// repeated requests do not re-embed the same corpus. Failure degrades to
+// token-only verification and is recorded — never blocks the answer.
+let embeddingModel = null;
+let embeddingInit = false;
+const EMBEDDING_CACHE_MAX = 300;
+const evidenceEmbeddingCache = new Map();
+
+function getEmbeddingModel() {
+    if (embeddingInit) return embeddingModel;
+    embeddingInit = true;
+    try {
+        const { GoogleGenerativeAI } = require('@google/generative-ai');
+        const apiKey = process.env.GEMINI_API_KEY || process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+        if (apiKey) {
+            embeddingModel = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-embedding-2' });
+        }
+    } catch {
+        embeddingModel = null;
+    }
+    return embeddingModel;
+}
+
+async function embedText(text) {
+    const model = getEmbeddingModel();
+    if (!model) throw Object.assign(new Error('embedding provider unavailable'), { code: 'EMBEDDING_FAILURE' });
+    const result = await model.embedContent(String(text || '').slice(0, 6000));
+    return result.embedding.values;
+}
+
+function cosineSimilarity(a, b) {
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i += 1) {
+        dot += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+    if (!normA || !normB) return 0;
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function getEvidenceEmbedding(item) {
+    const cacheKey = item.id || null;
+    if (cacheKey && evidenceEmbeddingCache.has(cacheKey)) return evidenceEmbeddingCache.get(cacheKey);
+    const vector = await embedText(`${item.title || ''}\n${String(item.content || item.excerpt || '').slice(0, 3000)}`);
+    if (cacheKey) {
+        if (evidenceEmbeddingCache.size >= EMBEDDING_CACHE_MAX) {
+            const oldest = evidenceEmbeddingCache.keys().next().value;
+            if (oldest) evidenceEmbeddingCache.delete(oldest);
+        }
+        evidenceEmbeddingCache.set(cacheKey, vector);
+    }
+    return vector;
+}
+
+// cosine thresholds tuned for gemini-embedding-2 on short clinical claims.
+const SEMANTIC_DIRECT = 0.72;
+const SEMANTIC_INDIRECT = 0.58;
+
 const HIGH_RISK_PATTERN = /\b(dose|mg|mcg|units?|iv|intravenous|pregnan|child|pediatric|infant|neonat|chemotherap|anticoagul|insulin|toxic)\w*/i;
 
 function normalize(value) { return String(value || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean); }
@@ -42,8 +104,12 @@ function verifyClaim(claim, evidence = [], conflicts = [], queryContextText = ''
     const matches = evidence.map((item) => {
         const evidenceText = String(item.content || item.excerpt || '');
         const contentTokens = new Set(normalize(evidenceText));
-        const overlap = [...claimTokens].filter((token) => token.length > 3 && contentTokens.has(token)).length;
-        const ratio = claimTokens.size ? overlap / claimTokens.size : 0;
+        // Ratio over MEANINGFUL claim tokens (>3 chars): filler words (is/a/in)
+        // must not dilute the support ratio (V2 bug: "Labetalol is a preferred
+        // antihypertensive in pregnancy" scored 0.43 instead of 0.75).
+        const meaningfulTokens = [...claimTokens].filter((token) => token.length > 3);
+        const overlap = meaningfulTokens.filter((token) => contentTokens.has(token)).length;
+        const ratio = meaningfulTokens.length ? overlap / meaningfulTokens.length : 0;
         return { item, ratio, evidenceText };
     })
         .filter((match) => match.ratio >= 0.35)
@@ -76,4 +142,46 @@ function verifyClaims(claims, evidence, conflicts = [], queryContextText = '') {
     return (claims || []).map((claim) => verifyClaim(claim, evidence, conflicts, queryContextText));
 }
 
-module.exports = { SUPPORT_LEVELS, verifyClaim, verifyClaims, extractNumbers };
+/**
+ * Hybrid verification (spec §25): token overlap + semantic similarity.
+ * Runs the existing structural checks (negation inversion, numeric safety)
+ * ALWAYS; the semantic score can upgrade INDIRECT->DIRECT or rescue a claim
+ * whose token overlap undercounts paraphrase, but it can never override the
+ * numeric/negation guards (spec §29/§0.5).
+ * Returns { claims, diagnostics } where diagnostics record embedding status.
+ */
+async function verifyClaimsHybrid(claims, evidence = [], conflicts = [], queryContextText = '') {
+    const base = verifyClaims(claims, evidence, conflicts, queryContextText);
+    const diagnostics = { semantic_verification: 'unavailable' };
+    if (!base.length || !evidence.length) return { claims: base, diagnostics };
+    try {
+        const claimVectors = await Promise.all(base.map((claim) => embedText(claim.text)));
+        const evidenceVectors = await Promise.all(evidence.slice(0, 8).map((item) => getEvidenceEmbedding(item)));
+        diagnostics.semantic_verification = 'embedding';
+        const enhanced = base.map((claim, claimIndex) => {
+            if (claim.support_level === 'CONFLICTING' || (claim.support_level === 'UNSUPPORTED' && claim.reason)) return claim;
+            let bestCosine = 0;
+            let bestItem = null;
+            for (let e = 0; e < evidenceVectors.length; e += 1) {
+                const cosine = cosineSimilarity(claimVectors[claimIndex], evidenceVectors[e]);
+                if (cosine > bestCosine) { bestCosine = cosine; bestItem = evidence[e]; }
+            }
+            // Numeric/negation guards already applied in verifyClaim — semantic
+            // similarity only refines the direct/indirect boundary.
+            const sourceIds = new Set([...(claim.source_ids || []), bestItem?.id].filter(Boolean));
+            let level = claim.support_level;
+            const isHighRiskClaim = claim.high_risk || HIGH_RISK_PATTERN.test(claim.text);
+            if (bestCosine >= SEMANTIC_DIRECT && level !== 'UNSUPPORTED' && bestItem?.evidence_depth !== 'metadata_only') level = 'SUPPORTED_DIRECT';
+            else if (bestCosine >= SEMANTIC_INDIRECT && level === 'UNSUPPORTED' && !isHighRiskClaim) level = 'SUPPORTED_INDIRECT';
+            // High-risk claims (dosing/pregnancy/etc, spec §42) are never
+            // rescued from UNSUPPORTED by semantics alone.
+            return { ...claim, support_level: level, semantic_similarity: Number(bestCosine.toFixed(4)), source_ids: sourceIds };
+        });
+        return { claims: enhanced, diagnostics };
+    } catch (error) {
+        // Spec §95: degraded, not silent.
+        return { claims: base, diagnostics: { semantic_verification: 'unavailable', semantic_failure: error.code || 'EMBEDDING_FAILURE' } };
+    }
+}
+
+module.exports = { SUPPORT_LEVELS, verifyClaim, verifyClaims, verifyClaimsHybrid, extractNumbers, cosineSimilarity };
