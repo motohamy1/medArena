@@ -173,6 +173,10 @@ const EVIDENCE_BADGES: Record<string, { label: string; color: string }> = {
   OUTDATED: { label: "Outdated Evidence", color: "#fbbf24" },
   CONFLICTING: { label: "Conflicting Evidence", color: Colors.pink },
   NO_EVIDENCE: { label: "No Evidence", color: Colors.pink },
+  NO_RELEVANT_EVIDENCE: { label: "No Relevant Evidence", color: Colors.pink },
+  CLARIFICATION_REQUIRED: { label: "Clarification Needed", color: "#fbbf24" },
+  SOURCE_UNAVAILABLE: { label: "Evidence Service Unavailable", color: Colors.pink },
+  RETRIEVAL_TIMEOUT: { label: "Retrieval Timed Out", color: "#fbbf24" },
   SYSTEM_FAILURE: { label: "System Failure", color: Colors.pink },
   offline_knowledge: { label: "Offline (Not Live-Verified)", color: "#fbbf24" },
   conversation: { label: "Assistant", color: "#94a3b8" },
@@ -294,7 +298,34 @@ const ThinkingIndicator: React.FC = () => {
         <Animated.View className="w-1.5 h-1.5 rounded-full bg-turquoise" style={s2} />
         <Animated.View className="w-1.5 h-1.5 rounded-full bg-turquoise" style={s3} />
       </View>
+      {/* Spec V3 §49: staged progress replaces an unexplained spinner. */}
+      <ThinkingStageLabel />
     </Animated.View>
+  );
+};
+
+// Spec V3 §49/§52: rotating, human-readable pipeline stages — no internal
+// source names, meaningful progress while retrieval/composition runs.
+const THINKING_STAGES = [
+  "Understanding clinical question",
+  "Searching authoritative evidence",
+  "Checking relevant guidelines",
+  "Verifying evidence",
+  "Preparing answer",
+];
+
+const ThinkingStageLabel: React.FC = () => {
+  const [stageIndex, setStageIndex] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStageIndex((index) => Math.min(index + 1, THINKING_STAGES.length - 1));
+    }, 2200);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <Text className="text-gray-500 text-[10px] font-mono px-4">
+      {THINKING_STAGES[stageIndex]}…
+    </Text>
   );
 };
 
