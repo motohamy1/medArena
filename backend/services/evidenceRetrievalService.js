@@ -136,10 +136,18 @@ function dedupeKey(item) {
     return title ? `title:${title}` : null;
 }
 
-async function retrieveEvidence(plan, query, { forceBroad = false, focusTasks = null } = {}) {
+async function retrieveEvidence(plan, query, { forceBroad = false, focusTasks = null, deadline = null } = {}) {
     const failures = [];
     const sourceHealth = [];
+    const budgetExceeded = () => Boolean(deadline && Date.now() > deadline);
     const runPlan = async (sourcePlan, { broad = false, queriesOverride = null } = {}) => {
+        if (budgetExceeded()) {
+            // Request-level budget spent (spec §33): stop this source, record
+            // the honest reason instead of silently truncating.
+            sourceHealth.push({ sourceId: sourcePlan.source_id, status: 'skipped', errorType: 'RETRIEVAL_TIMEOUT', checkedAt: new Date().toISOString() });
+            failures.push({ source_id: sourcePlan.source_id, code: 'RETRIEVAL_TIMEOUT', message: 'request time budget exhausted before this source ran' });
+            return [];
+        }
         const variants = (queriesOverride || sourcePlan.queries || []).filter(Boolean).slice(0, MAX_QUERY_VARIANTS);
         const collected = [];
         const seenKeys = new Set();
@@ -180,8 +188,13 @@ async function retrieveEvidence(plan, query, { forceBroad = false, focusTasks = 
                 .filter(Boolean)
                 .slice(0, MAX_QUERY_VARIANTS)
             : null;
+        if (budgetExceeded()) {
+            sourceHealth.push({ sourceId: sourcePlan.source_id, status: 'skipped', errorType: 'RETRIEVAL_TIMEOUT', checkedAt: new Date().toISOString() });
+            failures.push({ source_id: sourcePlan.source_id, code: 'RETRIEVAL_TIMEOUT', message: 'request time budget exhausted before this source ran' });
+            return [];
+        }
         const items = await runPlan(sourcePlan, { broad: forceBroad, queriesOverride: taskQueries && taskQueries.length ? taskQueries : null });
-        if (items.length || forceBroad) return items;
+        if (items.length || forceBroad || budgetExceeded()) return items;
         // Expansion round: retry the same source family without publication-type/year filters.
         return runPlan(sourcePlan, { broad: true });
     }));

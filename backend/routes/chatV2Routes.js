@@ -11,6 +11,7 @@ const { composeEvidenceAnswer } = require('../services/clinicalAnswerComposer');
 const { createAbstentionResponse, createClarificationResponse, buildResponseContract } = require('../models/responseContracts');
 const { logEvent } = require('../services/structuredLogger');
 const { extractSessionClinicalState } = require('../services/sessionClinicalState');
+const evidenceCache = require('../services/evidenceCache');
 
 // Pure greetings carry no clinical question; running them through evidence
 // retrieval produces irrelevant registry noise (spec §34: don't dress
@@ -132,27 +133,42 @@ router.post('/', async (req, res) => {
         // Spec §12/§13: decompose into bounded evidence tasks before planning.
         const tasks = await timeStage('task_decomposition', async () => decomposeClinicalTask(query));
         const plan = createRetrievalPlan(query, sessionState, tasks);
-        logEvent(requestId, 'retrieval_started', { intent: query.intent, complexity: query.complexity, source_count: plan.plans.length, task_count: tasks.length, max_rounds: plan.max_rounds });
+        // Spec §33: request-level time budget — retrieval must respect the
+        // plan's budget so a NORMAL request never becomes a 45s spinner.
+        const retrievalDeadline = plan.time_budget_ms ? Date.now() + plan.time_budget_ms : null;
+        logEvent(requestId, 'retrieval_started', { intent: query.intent, complexity: query.complexity, source_count: plan.plans.length, task_count: tasks.length, max_rounds: plan.max_rounds, time_budget_ms: plan.time_budget_ms });
 
+        // Spec §35/§64: canonical-keyed evidence cache. A hit within TTL
+        // skips external retrieval entirely; a stale-but-tolerated hit is
+        // labeled, never presented as live.
+        const cacheLookup = await timeStage('cache_lookup', async () => evidenceCache.get(query));
         let retrieval;
-        try {
-            // Round 1 already uses task-anchored queries (spec §13/§53): the
-            // decomposer builds condition-anchored formulations that beat the
-            // raw normalized query for source-specific search.
-            retrieval = await timeStage('retrieval', () => retrieveEvidence(plan, query, { focusTasks: tasks }));
-        } catch (error) {
-            // Spec §6/§32: SYSTEM_FAILURE (infrastructure) is distinct from
-            // NO_RELEVANT_EVIDENCE (search worked, nothing relevant found).
-            const statusByCode = {
-                EMBEDDING_FAILURE: 'SYSTEM_FAILURE',
-                DATABASE_FAILURE: 'SYSTEM_FAILURE',
-                SOURCE_UNAVAILABLE: 'SOURCE_UNAVAILABLE',
-                RETRIEVAL_TIMEOUT: 'RETRIEVAL_TIMEOUT',
-            };
-            const status = statusByCode[error.code] || 'SOURCE_UNAVAILABLE';
-            logEvent(requestId, 'retrieval_failed', { code: error.code, failures: error.cause });
-            const abstention = createAbstentionResponse({ status, queryMetadata: query, limitations: [error.code === 'EMBEDDING_FAILURE' ? 'embedding_provider_unavailable' : 'evidence_source_unavailable'], retryable: true });
-            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+        let cacheHit = null;
+        if (cacheLookup.hit) {
+            cacheHit = cacheLookup;
+            retrieval = { candidates: cacheLookup.candidates, failures: [], sourceHealth: [{ sourceId: 'cache', status: 'healthy', checkedAt: new Date().toISOString() }], selected: cacheLookup.selected };
+            logEvent(requestId, 'cache_hit', { age_ms: cacheLookup.age_ms, stale: cacheLookup.stale, selected_count: cacheLookup.selected.length });
+        } else {
+            try {
+                // Round 1 already uses task-anchored queries (spec §13/§53): the
+                // decomposer builds condition-anchored formulations that beat the
+                // raw normalized query for source-specific search.
+                retrieval = await timeStage('retrieval', () => retrieveEvidence(plan, query, { focusTasks: tasks, deadline: retrievalDeadline }));
+                evidenceCache.set(query, { selected: retrieval.selected, candidates: retrieval.candidates });
+            } catch (error) {
+                // Spec §6/§32: SYSTEM_FAILURE (infrastructure) is distinct from
+                // NO_RELEVANT_EVIDENCE (search worked, nothing relevant found).
+                const statusByCode = {
+                    EMBEDDING_FAILURE: 'SYSTEM_FAILURE',
+                    DATABASE_FAILURE: 'SYSTEM_FAILURE',
+                    SOURCE_UNAVAILABLE: 'SOURCE_UNAVAILABLE',
+                    RETRIEVAL_TIMEOUT: 'RETRIEVAL_TIMEOUT',
+                };
+                const status = statusByCode[error.code] || 'SOURCE_UNAVAILABLE';
+                logEvent(requestId, 'retrieval_failed', { code: error.code, failures: error.cause });
+                const abstention = createAbstentionResponse({ status, queryMetadata: query, limitations: [error.code === 'EMBEDDING_FAILURE' ? 'embedding_provider_unavailable' : 'evidence_source_unavailable'], retryable: true });
+                return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+            }
         }
         let sufficiency = assessEvidenceSufficiency(retrieval.selected, query, { systemFailure: false, conflicts: [] });
         // Spec V2.1-P observability: record per-source health on every request.
@@ -169,9 +185,13 @@ router.post('/', async (req, res) => {
             logEvent(requestId, 'retrieval_round_2_started', { reason: sufficiency.missing, uncovered_tasks: uncovered.map((entry) => entry.task_id) });
             try {
                 const round2Query = { ...query, temporal_request: sufficiency.missing.includes('current_evidence') ? 'current' : query.temporal_request };
-                const retrieval2 = await timeStage('retrieval_deep', () => retrieveEvidence(plan, round2Query, { forceBroad: true, focusTasks: focusTasks.length ? focusTasks : null }));
+                // Round 2 gets its own budget slice so an exhausted round-1
+                // budget cannot starve the deep strategy (spec §33).
+                const round2Deadline = Date.now() + (plan.time_budget_ms || 8000);
+                const retrieval2 = await timeStage('retrieval_deep', () => retrieveEvidence(plan, round2Query, { forceBroad: true, focusTasks: focusTasks.length ? focusTasks : null, deadline: round2Deadline }));
                 const mergedSelected = dedupeById([...retrieval.selected, ...retrieval2.selected]);
                 retrieval = { ...retrieval, selected: mergedSelected, candidates: dedupeById([...retrieval.candidates, ...retrieval2.candidates]), failures: [...retrieval.failures, ...retrieval2.failures] };
+                evidenceCache.set(query, { selected: mergedSelected, candidates: retrieval.candidates });
                 sufficiency = assessEvidenceSufficiency(mergedSelected, query, { systemFailure: false, conflicts: [] });
                 logEvent(requestId, 'sufficiency_reassessed', { status: sufficiency.status, selected_count: mergedSelected.length });
             } catch (error) {
@@ -197,7 +217,11 @@ router.post('/', async (req, res) => {
             return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
         }
         const response = composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState, coverage });
-        logEvent(requestId, 'claim_verification_completed', { claims: response.claims.length, sources: response.sources.length, status: response.evidence.status });
+        // Spec §33/§35: stale cached evidence is labeled, never passed as live.
+        if (cacheHit && cacheHit.stale && !response.limitations.includes('cached_evidence_not_live_refreshed')) {
+            response.limitations.push('cached_evidence_not_live_refreshed');
+        }
+        logEvent(requestId, 'claim_verification_completed', { claims: response.claims.length, sources: response.sources.length, status: response.evidence.status, cache_hit: Boolean(cacheHit) });
         return res.json({ ...response, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
     } catch (error) {
         logEvent(requestId, 'request_error', { code: error.code || 'VALIDATION_FAILURE' });
