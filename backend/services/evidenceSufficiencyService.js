@@ -70,6 +70,12 @@ function assessEvidenceSufficiency(evidence, query = {}, diagnostics = {}) {
     if (conflicts.length > 0) {
         return { status: STATUSES.CONFLICTING, score: 0.5, missing, conflicts, support_coverage: Number((direct.length / items.length).toFixed(4)) };
     }
+    // Explicitly superseded/withdrawn documents (real temporal metadata, not
+    // "old by date") must not be presented as an answer basis (spec §15/§82).
+    const supersededOnly = items.every((item) => item.document_status === 'SUPERSEDED' || item.document_status === 'WITHDRAWN' || item.superseded_date);
+    if (supersededOnly) {
+        return { status: STATUSES.OUTDATED, score: 0.2, missing: [...missing, 'superseded_documents'], conflicts: [], support_coverage: Number((direct.length / items.length).toFixed(4)) };
+    }
     const coverage = direct.length / items.length;
     if (direct.length === 0) {
         // Retrieval ran but nothing directly relevant: honest abstention,
@@ -86,7 +92,11 @@ function assessEvidenceSufficiency(evidence, query = {}, diagnostics = {}) {
         };
     }
     if (currentRequired && current.length === 0 && direct.length > 0) {
-        return { status: STATUSES.OUTDATED, score: Number((coverage * 0.5).toFixed(4)), missing, conflicts: [], support_coverage: Number(coverage.toFixed(4)) };
+        // Spec §14: current evidence is PREFERRED for treatment questions, not
+        // mandatory. Old-but-relevant evidence yields PARTIAL with the gap
+        // recorded; full abstention (OUTDATED) is reserved for explicitly
+        // superseded documents.
+        return { status: STATUSES.PARTIAL, score: Number((coverage * 0.4).toFixed(4)), missing, conflicts: [], support_coverage: Number(coverage.toFixed(4)) };
     }
     return { status: STATUSES.PARTIAL, score: Number((coverage * 0.5).toFixed(4)), missing, conflicts: [], support_coverage: Number(coverage.toFixed(4)) };
 }

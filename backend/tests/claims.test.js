@@ -43,12 +43,16 @@ test('infrastructure failure -> SYSTEM_FAILURE', () => {
     const result = assessEvidenceSufficiency([], {}, { systemFailure: true });
     assert.equal(result.status, 'SYSTEM_FAILURE');
 });
-test('currency required but evidence only old -> OUTDATED', () => {
+test('currency required but evidence only old -> PARTIAL with gap recorded (§14: preferred, not mandatory)', () => {
     const evidence = [{ authority_tier: 1, relevance_score: 0.9, freshness: 'old', is_current: false, content: 'x' }];
     const query = { temporal_request: 'current' };
     const result = assessEvidenceSufficiency(evidence, query, {});
-    assert.equal(result.status, 'OUTDATED');
+    assert.equal(result.status, 'PARTIAL');
     assert.ok(result.missing.includes('current_evidence'));
+});
+test('superseded document stays OUTDATED', () => {
+    const result = assessEvidenceSufficiency([{ authority_tier: 1, relevance_score: 0.9, freshness: 'old', document_status: 'SUPERSEDED', content: 'x' }], { temporal_request: 'current' }, {});
+    assert.equal(result.status, 'OUTDATED');
 });
 test('recent evidence accepted when currency requested', () => {
     const evidence = [{ authority_tier: 1, relevance_score: 0.9, freshness: 'recent', content: 'x' }];
