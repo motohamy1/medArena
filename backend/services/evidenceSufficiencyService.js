@@ -71,6 +71,11 @@ function assessEvidenceSufficiency(evidence, query = {}, diagnostics = {}) {
         return { status: STATUSES.CONFLICTING, score: 0.5, missing, conflicts, support_coverage: Number((direct.length / items.length).toFixed(4)) };
     }
     const coverage = direct.length / items.length;
+    if (direct.length === 0) {
+        // Retrieval ran but nothing directly relevant: honest abstention,
+        // never a weak PARTIAL built on tangential records (spec §23/§26).
+        return { status: STATUSES.NO_RELEVANT_EVIDENCE, score: 0, missing, conflicts: [], support_coverage: 0 };
+    }
     if (authoritative.length > 0 && direct.length > 0 && (!currentRequired || current.length > 0)) {
         return {
             status: coverage >= 0.7 ? STATUSES.VERIFIED : STATUSES.PARTIAL,

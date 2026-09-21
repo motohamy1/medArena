@@ -136,7 +136,10 @@ router.post('/', async (req, res) => {
 
         let retrieval;
         try {
-            retrieval = await timeStage('retrieval', () => retrieveEvidence(plan, query));
+            // Round 1 already uses task-anchored queries (spec §13/§53): the
+            // decomposer builds condition-anchored formulations that beat the
+            // raw normalized query for source-specific search.
+            retrieval = await timeStage('retrieval', () => retrieveEvidence(plan, query, { focusTasks: tasks }));
         } catch (error) {
             // Spec §6/§32: SYSTEM_FAILURE (infrastructure) is distinct from
             // NO_RELEVANT_EVIDENCE (search worked, nothing relevant found).
