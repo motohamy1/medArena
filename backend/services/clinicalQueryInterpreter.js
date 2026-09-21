@@ -42,6 +42,8 @@ const EGYPTIAN_TERMS = Object.freeze({
     'صفرا': { term: 'jaundice', type: 'symptom' },
     'صفراء': { term: 'jaundice', type: 'symptom' },
     'حمل': { term: 'pregnancy', type: 'population' },
+    'فيتامينات': { term: 'vitamin', type: 'intent' },
+    'فيتامين': { term: 'vitamin', type: 'intent' },
     'علاج': { term: 'treatment', type: 'intent' },
     'جرعة': { term: 'dose', type: 'intent' },
 });
@@ -347,6 +349,7 @@ function classifyIntent(text, normalizedTerms, history) {
     if (isFollowUpShape) return 'follow_up';
     if (/\b(latest|current|newest|updated|recent|what changed|today)\b|احدث|أحدث|حالي|جديد/.test(lower)) return 'latest_evidence';
     if (/\b(research|study|studies|trial|literature|evidence)\b|بحث|دراسات/.test(lower)) return 'research_question';
+    if (/\b(vitamin|supplement|nutri)\w*\b|فيتامين/.test(lower)) return 'drug_question';
     if (/\b(dose|dosage|mg\/kg|how much)\b|جرعة/.test(lower)) return 'drug_question';
     if (/\b(diagnos|workup|differential|test)\w*\b|تشخيص|فحوص/.test(lower)) return 'diagnosis_question';
     if (/\b(guideline|first[- ]line|recommended|management|treatment|best treatment)\w*\b|إرشادات|علاج|بروتوكول|افضل علاج|أفضل علاج/.test(lower)) return 'guideline_question';
@@ -398,8 +401,12 @@ function interpretClinicalQuery(message, history = []) {
     const drugClasses = [];
     const medications = [];
     const symptoms = [];
-    const tokens = mask.tokens.filter((token) => token.length > 1 && !/^\d+$/.test(token) && !STOPWORDS.has(token));
-    for (const token of tokens) {
+    // Keep original mask indices: negation lookup must use the unfiltered
+    // token position, not the position in this filtered list.
+    const tokens = mask.tokens
+        .map((token, index) => ({ token, index }))
+        .filter(({ token }) => token.length > 1 && !/^\d+$/.test(token) && !STOPWORDS.has(token));
+    for (const { token } of tokens) {
         let resolved = fuzzyLexiconMatch(token);
         if (!resolved) resolved = resolveAbbreviation(token);
         if (!resolved) continue;
@@ -495,8 +502,8 @@ function interpretClinicalQuery(message, history = []) {
     // ambiguous abbreviations, pure Arabic function words) are excluded.
     const AR_FUNCTION_WORDS = new Set(['دلوقتي', 'دولوقتي', 'طب', 'طيب', 'كان', 'عنده', 'عندي', 'بسبب', 'ايه', 'إيه', 'اللي', 'من', 'في', 'على', 'لو', 'دا', 'ده', 'ممحكن', 'ممكن', 'احسن', 'أحسن', 'افضل', 'أفضل', 'ولا', 'أو', 'او', 'هل', 'الـ', 'زي', 'زيادة', 'حالة', 'وهل', 'وبديله', 'مفيش', 'مش', 'ليها', 'ليه', 'زيادة']);
     const NOISE_TOKENS = new Set(['not', 'no', 'like', 'her', 'his', 'she', 'and', 'the', 'with', 'best', 'what', 'is']);
-    const rawTokens = tokens.filter((token) => token.length > 2 && !NOISE_TOKENS.has(token) && !AR_FUNCTION_WORDS.has(token) && !mask.mask[tokens.indexOf(token)] && !ambiguities.some((a) => a.token === token) && !/^(\d)/.test(token) && !/^50s$/.test(token));
-    for (const token of rawTokens) { const canonical = ENGLISH_SYNONYMS[token] || token; pushTerm(canonical); }
+    const rawTokens = tokens.filter(({ token, index }) => token.length > 2 && !NOISE_TOKENS.has(token) && !AR_FUNCTION_WORDS.has(token) && !mask.mask[index] && !ambiguities.some((a) => a.token === token) && !/^(\d)/.test(token) && !/^50s$/.test(token));
+    for (const { token } of rawTokens) { const canonical = ENGLISH_SYNONYMS[token] || token; pushTerm(canonical); }
     // Inherited conditions/terms from session state keep follow-up retrieval grounded.
     if (sessionState.active && isFollowUp) {
         if (sessionState.obesity) pushTerm('obesity');
