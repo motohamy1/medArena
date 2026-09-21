@@ -167,8 +167,62 @@ async function searchCustomKnowledge(queryText, match_count = 5, match_threshold
 }
 
 /**
- * Chunk long text into smaller pieces (approx 500-1000 characters) 
- * with overlapping to preserve context.
+ * Guideline-aware chunking (spec V3 §20): a clinical recommendation and its
+ * qualifiers form ONE retrievable unit — never split "recommended" from
+ * "only in patients with..." or "may be considered" from "low-certainty
+ * evidence".
+ *
+ * Strategy: sentence-level segmentation, then greedy grouping where a
+ * recommendation-bearing sentence pulls the following qualifier sentence(s)
+ * into the same chunk. Non-recommendation prose is chunked by size as before.
+ */
+const RECOMMENDATION_CUE = /\b(recommend(?:s|ed|ation)?s?\b|should be|should not|must be|must not|is indicated|are indicated|first[- ]line|second[- ]line|avoid|contraindicated|monitored with|considered)\b|ينصح|يُنصح|يمنع|يُمنع|يُفضل|يفضل|يوصى/i;
+const QUALIFIER_CUE = /^(?:\s*(?:in patients with|only in|provided that|unless|except|if|when|while|because|due to|provided|but|however|although|unless there is|particularly|especially|caution|with caution|for patients|among patients|low[- ]certainty|high[- ]certainty|moderate[- ]certainty|very low|conditional))/i;
+
+function chunkGuidelineText(text, maxChunkSize = 1000) {
+    const source = String(text || '');
+    const sentences = source.match(/[^.!?(?:۔)]+[.!?]+(?:\s|$)|[^.!?(?:۔)]+$/g) || [source];
+    const chunks = [];
+    let current = [];
+    let currentLength = 0;
+    let keepNext = 0; // remaining qualifier sentences that must join the current chunk
+
+    const flush = () => {
+        if (current.length) chunks.push(current.join(' ').trim());
+        current = [];
+        currentLength = 0;
+    };
+
+    for (const raw of sentences) {
+        const sentence = raw.trim();
+        if (!sentence) continue;
+        const isRecommendation = RECOMMENDATION_CUE.test(sentence);
+        const isQualifier = QUALIFIER_CUE.test(sentence) || keepNext > 0;
+
+        // A qualifier must NOT start a new chunk if a recommendation is open.
+        if ((currentLength + sentence.length > maxChunkSize) && !(isQualifier && current.length)) {
+            flush();
+        }
+        current.push(sentence);
+        currentLength += sentence.length + 1;
+        if (isRecommendation && !QUALIFIER_CUE.test(sentence)) {
+            // Open the qualifier window: the NEXT sentence (and only that one)
+            // is presumed to qualify this recommendation.
+            keepNext = 1;
+        } else if (keepNext > 0 && QUALIFIER_CUE.test(sentence)) {
+            keepNext -= 1; // consumed by this chunk
+        } else {
+            keepNext = 0;
+        }
+    }
+    flush();
+    return chunks.filter(Boolean);
+}
+
+/**
+ * Chunk long text into smaller pieces (approx 500-1000 characters)
+ * with overlapping to preserve context. (Legacy generic chunker retained for
+ * non-guideline ingestion.)
  */
 function chunkText(text, maxChunkSize = 1000) {
     const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
@@ -206,8 +260,10 @@ async function ingestKnowledge(title, text, sourceUrl = '', onProgress = null, m
     } = metadata;
 
     console.log(`[Ingest] Starting ingestion for: "${title}" (${guidelineSociety} ${publicationYear})`);
-    const chunks = chunkText(text);
-    console.log(`[Ingest] Sliced into ${chunks.length} chunks.`);
+    // Spec V3 §20: guidelines are chunked recommendation-first (qualifiers
+    // stay attached to their recommendation), not as generic prose.
+    const chunks = chunkGuidelineText(text);
+    console.log(`[Ingest] Sliced into ${chunks.length} guideline-aware chunks.`);
 
     let successCount = 0;
     const batchSize = 10; // Process 10 chunks at a time for speed
@@ -261,5 +317,7 @@ module.exports = {
     searchCustomKnowledge,
     searchInternalKnowledge,
     searchInternalKnowledgeLexical,
+    chunkText,
+    chunkGuidelineText,
     ingestKnowledge
 };

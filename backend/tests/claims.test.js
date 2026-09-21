@@ -174,3 +174,21 @@ test('structured error body (§38)', () => {
     assert.equal(body.error.code, 'PUBMED_TIMEOUT');
     assert.equal(body.error.retryable, true);
 });
+
+// ── Guideline-aware chunking (§20) ──
+test('chunking: recommendation never separated from its qualifier', () => {
+    const { chunkGuidelineText } = require('../services/knowledgeService');
+    const guideline = [
+        'We recommend thiazide-type diuretics as initial therapy for most adults with hypertension.',
+        'Only in patients with significant hyperkalemia should alternatives be considered.',
+        'ACE inhibitors are preferred in patients with albuminuria.',
+        'Calcium channel blockers may be considered in elderly patients, although low-certainty evidence supports this choice in frail patients.',
+        'We suggest starting with lifestyle modification including sodium reduction and weight loss for all patients.',
+        'Provided that blood pressure remains above target after 3 months, add a second agent.',
+    ].join(' ');
+    const chunks = chunkGuidelineText(guideline, 260);
+    assert.ok(chunks.some((c) => c.includes('thiazide-type diuretics') && c.includes('hyperkalemia')));
+    assert.ok(chunks.some((c) => c.includes('Calcium channel blockers') && c.includes('low-certainty')));
+    assert.ok(chunks.some((c) => c.includes('lifestyle modification') && c.includes('Provided that')));
+    assert.ok(chunks.every((c) => c.length <= 400), 'chunks bounded');
+});
