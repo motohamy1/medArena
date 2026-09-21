@@ -1,61 +1,364 @@
 {
     "description": "Med Arena retrieval benchmark gold set (spec V3 §103). 50 representative clinical questions across 5 language/complexity categories. expected_status: VERIFIED|PARTIAL means the pipeline must NOT abstain; abstain means NO_RELEVANT_EVIDENCE (or CLARIFICATION_REQUIRED where noted) is the correct outcome.",
-    "categories": ["english", "arabic", "egyptian_mixed", "typo_abbreviation", "follow_up"],
+    "categories": [
+        "english",
+        "arabic",
+        "egyptian_mixed",
+        "typo_abbreviation",
+        "follow_up"
+    ],
     "queries": [
-        {"id": "en_01", "q": "What is the current first-line treatment for helicobacter pylori?", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_02", "q": "female obese in her 50s BP 160/90 not emergency or urgency outpatient what is best treatment?", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_03", "q": "What is the mechanism of action of metformin?", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_04", "q": "Explain the Tokyo Guidelines 2018 diagnostic criteria and severity grading for acute cholangitis, empiric antibiotics, and urgent biliary drainage timing.", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_05", "q": "Pediatric paracetamol dose for a child aged 4 years and weight 16 kg", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_06", "q": "Can diclofenac be given to a patient with peptic ulcer?", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_07", "q": "Diagnostic criteria and workup of acute pancreatitis", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_08", "q": "Initial management of anaphylaxis in adults", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_09", "q": "Latest evidence on SGLT2 inhibitors in heart failure 2025", "category": "english", "expected_status": "VERIFIED|PARTIAL", "expect_temporal": "current"},
-        {"id": "en_10", "q": "Is ciprofloxacin safe in pregnancy?", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_11", "q": "Metformin dose adjustment in renal impairment", "category": "english", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "en_12", "q": "What was recommended in 2021 for hypertension management before the latest guideline change?", "category": "english", "expected_status": "VERIFIED|PARTIAL", "expect_temporal": "historical"},
-        {"id": "en_13", "q": "treatment protocol for frumious bandersnatch syndrome", "category": "english", "expected_status": "abstain"},
-        {"id": "ar_01", "q": "علاج جرثومة المعدة", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "ar_02", "q": "مريض عنده ضغط 160/90 مش طوارئ، ايه افضل علاج؟", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "ar_03", "q": "ماهي جرعة باراسيتامول لطفل عمره 4 سنين ووزنه 16 كيلو؟", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "ar_04", "q": "ايه الفيتامينات اللي محتاجها مريض jaundice بسبب acute cholangitis؟", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "ar_05", "q": "هل ممنوع_diabetics ياخدوا aspirin في الصيام?", "category": "arabic", "expected_status": "abstain"},
-        {"id": "ar_05b", "q": "هل يمنع استخدام مضادات الالتهاب مع قرحة المعدة؟", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "ar_06", "q": "ماهي اعراض ارتفاع ضغط الدم الطارئة؟", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "ar_07", "q": "علاج التهاب المرارة", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "ar_08", "q": "ماهو العلاج الموصى حاليا لالتهاب الكبد المناعي؟", "category": "arabic", "expected_status": "VERIFIED|PARTIAL", "expect_temporal": "current"},
-        {"id": "ar_09", "q": "ممكن اجيب ليك جرعة insulin لطفل؟", "category": "arabic", "expected_status": "abstain", "reason": "high-risk dosing requires weight/indication"},
-        {"id": "ar_10", "q": "ماهي معايير تشخيص التهاب البنكرياس الحاد؟", "category": "arabic", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_01", "q": "دلوقتي لو عندي female obese مريضة فوق الـ50 والـBP عندها 160/90 not emergency outpatient وزنها زايد جدا وحركتها قليلة، إيه أفضل علاج للضغط؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_02", "q": "طب هل CCB أحسن ولا thiazide like diuretic في حالة الـobese؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL", "history_ref": "eg_01"},
-        {"id": "eg_03", "q": "طب والحامل؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL", "history_ref": "eg_01"},
-        {"id": "eg_04", "q": "مريض عنده سخونية وترجيع من يومين، ايه التشخيص المبدئي؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_05", "q": "الاوجمنتين بياخد ازاي للجيوب الأنفية؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_06", "q": "مريض سكر وكلى، ممكن metformin؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_07", "q": "الكتافلام مع قرحة في المعدة يبقى خطر ولا لأ؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_08", "q": "قصر الكلى ممكن ياخد contrast في أشعة؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_09", "q": "النهجان في مريض قلب، اه الاسباب وايه الافضل يعمل؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "eg_10", "q": "صفرا بدون ألم ولا سخونية، داير ايه workup؟", "category": "egyptian_mixed", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_01", "q": "dthiazide", "category": "typo_abbreviation", "expected_status": "abstain", "reason": "single ambiguous token; thiazide candidate resolved"},
-        {"id": "typo_02", "q": "طب هل CCP أحسن ولا dthiazide like diurctic في حالة الـobese؟", "category": "typo_abbreviation", "expected_status": "CLARIFICATION_REQUIRED", "history_ref": "eg_01", "note": "CCP stays ambiguous -> clarification, never NO_EVIDENCE"},
-        {"id": "typo_03", "q": "dose of paracetmol in child", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_04", "q": "management of HTN in CKD patient", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_05", "q": "metformine renal dose adjusment", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_05b", "q": "metformin dose adjustment renal impairment", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_06", "q": "UTI treatment in pregnency", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_07", "q": "DKA management protocol fluid insuline", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_08", "q": "is diclofenec safe in gastitis", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_09", "q": "pediatric abx for CAP", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "typo_10", "q": "GOLD guidlines COPD exacrebation", "category": "typo_abbreviation", "expected_status": "VERIFIED|PARTIAL"},
-        {"id": "fu_01", "q": "what about alternative regimens?", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_01"},
-        {"id": "fu_02", "q": "طب والحامل؟", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_02"},
-        {"id": "fu_03", "q": "and if she has CKD?", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_02"},
-        {"id": "fu_04", "q": "and the pediatric dose?", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_01"},
-        {"id": "fu_05", "q": "وبديله؟", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "ar_01"},
-        {"id": "fu_06", "q": "what about in pregnancy?", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_11"},
-        {"id": "fu_07", "q": "how about the elderly?", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_02"},
-        {"id": "fu_08", "q": "طب لو الكلى بتقصر؟", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "eg_01"},
-        {"id": "fu_09", "q": "and in emergencies?", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_02"},
-        {"id": "fu_10", "q": "طيب ايه عن احدث الدراسات؟", "category": "follow_up", "expected_status": "VERIFIED|PARTIAL", "history_ref": "en_01", "expect_temporal": "current"}
+        {
+            "id": "en_01",
+            "q": "What is the current first-line treatment for helicobacter pylori?",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_02",
+            "q": "female obese in her 50s BP 160/90 not emergency or urgency outpatient what is best treatment?",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_03",
+            "q": "What is the mechanism of action of metformin?",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_04",
+            "q": "Explain the Tokyo Guidelines 2018 diagnostic criteria and severity grading for acute cholangitis, empiric antibiotics, and urgent biliary drainage timing.",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_05",
+            "q": "Pediatric paracetamol dose for a child aged 4 years and weight 16 kg",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_06",
+            "q": "Can diclofenac be given to a patient with peptic ulcer?",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_07",
+            "q": "Diagnostic criteria and workup of acute pancreatitis",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_08",
+            "q": "Initial management of anaphylaxis in adults",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_09",
+            "q": "Latest evidence on SGLT2 inhibitors in heart failure 2025",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL",
+            "expect_temporal": "current"
+        },
+        {
+            "id": "en_10",
+            "q": "Is ciprofloxacin safe in pregnancy?",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_11",
+            "q": "Metformin dose adjustment in renal impairment",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "en_12",
+            "q": "What was recommended in 2021 for hypertension management before the latest guideline change?",
+            "category": "english",
+            "expected_status": "VERIFIED|PARTIAL",
+            "expect_temporal": "historical"
+        },
+        {
+            "id": "en_13",
+            "q": "treatment protocol for frumious bandersnatch syndrome",
+            "category": "english",
+            "expected_status": "abstain"
+        },
+        {
+            "id": "ar_01",
+            "q": "علاج جرثومة المعدة",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "ar_02",
+            "q": "مريض عنده ضغط 160/90 مش طوارئ، ايه افضل علاج؟",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "ar_03",
+            "q": "ماهي جرعة باراسيتامول لطفل عمره 4 سنين ووزنه 16 كيلو؟",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "ar_04",
+            "q": "ايه الفيتامينات اللي محتاجها مريض jaundice بسبب acute cholangitis؟",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "ar_05",
+            "q": "هل ممنوع_diabetics ياخدوا aspirin في الصيام?",
+            "category": "arabic",
+            "expected_status": "abstain"
+        },
+        {
+            "id": "ar_05b",
+            "q": "هل يمنع استخدام مضادات الالتهاب مع قرحة المعدة؟",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "ar_06",
+            "q": "ماهي اعراض ارتفاع ضغط الدم الطارئة؟",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "ar_07",
+            "q": "علاج التهاب المرارة",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "ar_08",
+            "q": "ماهو العلاج الموصى حاليا لالتهاب الكبد المناعي؟",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL",
+            "expect_temporal": "current"
+        },
+        {
+            "id": "ar_09",
+            "q": "ممكن اجيب ليك جرعة insulin لطفل؟",
+            "category": "arabic",
+            "expected_status": "abstain_or_clarify",
+            "reason": "high-risk dosing requires weight/indication",
+            "note": "pediatric insulin dosing without age/weight MUST clarify (spec §39)"
+        },
+        {
+            "id": "ar_10",
+            "q": "ماهي معايير تشخيص التهاب البنكرياس الحاد؟",
+            "category": "arabic",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_01",
+            "q": "دلوقتي لو عندي female obese مريضة فوق الـ50 والـBP عندها 160/90 not emergency outpatient وزنها زايد جدا وحركتها قليلة، إيه أفضل علاج للضغط؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_02",
+            "q": "طب هل CCB أحسن ولا thiazide like diuretic في حالة الـobese؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "eg_01"
+        },
+        {
+            "id": "eg_03",
+            "q": "طب والحامل؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "eg_01"
+        },
+        {
+            "id": "eg_04",
+            "q": "مريض عنده سخونية وترجيع من يومين، ايه التشخيص المبدئي؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_05",
+            "q": "الاوجمنتين بياخد ازاي للجيوب الأنفية؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_06",
+            "q": "مريض سكر وكلى، ممكن metformin؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_07",
+            "q": "الكتافلام مع قرحة في المعدة يبقى خطر ولا لأ؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_08",
+            "q": "قصر الكلى ممكن ياخد contrast في أشعة؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_09",
+            "q": "النهجان في مريض قلب، اه الاسباب وايه الافضل يعمل؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "eg_10",
+            "q": "صفرا بدون ألم ولا سخونية، داير ايه workup؟",
+            "category": "egyptian_mixed",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_01",
+            "q": "dthiazide",
+            "category": "typo_abbreviation",
+            "expected_status": "abstain",
+            "reason": "single ambiguous token; thiazide candidate resolved"
+        },
+        {
+            "id": "typo_02",
+            "q": "طب هل CCP أحسن ولا dthiazide like diurctic في حالة الـobese؟",
+            "category": "typo_abbreviation",
+            "expected_status": "CLARIFICATION_REQUIRED",
+            "history_ref": "eg_01",
+            "note": "CCP stays ambiguous -> clarification, never NO_EVIDENCE"
+        },
+        {
+            "id": "typo_03",
+            "q": "dose of paracetmol in child",
+            "category": "typo_abbreviation",
+            "expected_status": "abstain_or_clarify",
+            "note": "pediatric dosing without stated age/weight -> clarification is the SAFE correct outcome (spec §39)"
+        },
+        {
+            "id": "typo_04",
+            "q": "management of HTN in CKD patient",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_05",
+            "q": "metformine renal dose adjusment",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_05b",
+            "q": "metformin dose adjustment renal impairment",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_06",
+            "q": "UTI treatment in pregnency",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_07",
+            "q": "DKA management protocol fluid insuline",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_08",
+            "q": "is diclofenec safe in gastitis",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_09",
+            "q": "pediatric abx for CAP",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "typo_10",
+            "q": "GOLD guidlines COPD exacrebation",
+            "category": "typo_abbreviation",
+            "expected_status": "VERIFIED|PARTIAL"
+        },
+        {
+            "id": "fu_01",
+            "q": "what about alternative regimens?",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_01"
+        },
+        {
+            "id": "fu_02",
+            "q": "طب والحامل؟",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_02"
+        },
+        {
+            "id": "fu_03",
+            "q": "and if she has CKD?",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_02"
+        },
+        {
+            "id": "fu_04",
+            "q": "and the pediatric dose?",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_01"
+        },
+        {
+            "id": "fu_05",
+            "q": "وبديله؟",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "ar_01"
+        },
+        {
+            "id": "fu_06",
+            "q": "what about in pregnancy?",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_11"
+        },
+        {
+            "id": "fu_07",
+            "q": "how about the elderly?",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_02"
+        },
+        {
+            "id": "fu_08",
+            "q": "طب لو الكلى بتقصر؟",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "eg_01"
+        },
+        {
+            "id": "fu_09",
+            "q": "and in emergencies?",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_02"
+        },
+        {
+            "id": "fu_10",
+            "q": "طيب ايه عن احدث الدراسات؟",
+            "category": "follow_up",
+            "expected_status": "VERIFIED|PARTIAL",
+            "history_ref": "en_01",
+            "expect_temporal": "current"
+        }
     ]
 }

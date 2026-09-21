@@ -257,8 +257,8 @@ function extractAge(text) {
             return { range: [value, null], value: null };
         }
     }
-    // explicit numeric age
-    const explicit = text.match(/(?:age|aged|year|years|سن|سنة)\s*(\d{1,3})\b/) || text.match(/\b(\d{1,3})\s*(?:year|years|سنة|سن)\b/);
+    // explicit numeric age ("4 years", "4 سنة", "4 سنين", "عمره 4")
+    const explicit = text.match(/(?:age|aged|year|years|عمره|عمرها|عمر|سن|سنة|سنين)\s*(\d{1,3})\b/) || text.match(/\b(\d{1,3})\s*(?:year|years|سنين|سنة|سن)/);
     if (explicit) {
         const value = Number(explicit[1]);
         if (value >= 0 && value <= 120) return { range: null, value };
