@@ -78,6 +78,11 @@ function isRelevantLiterature(ref, queryKeywords) {
 
 async function fetchClinicalLiterature(query, specialtyId, options = {}) {
     const { broad = false, includeTrials = true, includeFda = true } = options;
+    // Structured failures (spec §95): every network/parse problem is recorded
+    // with a code — never swallowed into a silent []. Declared outside the try
+    // so the outer catch can still report the aggregate failure. Legacy
+    // callers keep the items-only return; the v2 pipeline uses the strict path.
+    const failures = [];
     try {
         // Sanitize specialtyId: Ignore generic user roles like 'physicians', 'dentists', 'nurses', 'general'
         const validSpecialties = ['cardiology', 'pulmonology', 'gastroenterology', 'neurology', 'pediatrics', 'dermatology', 'infectious', 'endocrinology', 'nephrology', 'oncology', 'rheumatology'];
@@ -122,7 +127,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                     // PUB_YEAR filter instead. An invalid sort value also makes the API
                     // return a version-only stub.
                     const response = await fetch(url.toString());
-                    if (!response.ok) continue;
+                    if (!response.ok) { failures.push({ component: 'europe_pmc', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); continue; }
                     const data = await response.json();
                     let results = data.resultList?.result || [];
                     if (!results.length && (data.hitCount === undefined || data.hitCount > 0)) {
@@ -154,7 +159,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                         };
                     }).filter(r => r.abstract && isRelevantLiterature(r, cleanQuery));
                     if (items.length) return items;
-                } catch { continue; }
+                } catch (error) { failures.push({ component: 'europe_pmc', code: 'NETWORK_ERROR', message: error.message }); continue; }
             }
             return [];
         };
@@ -170,7 +175,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                 url.searchParams.append('sort', 'LastUpdatePostDate:desc'); // Get latest
 
                 const response = await fetch(url.toString());
-                if (!response.ok) return [];
+                if (!response.ok) { failures.push({ component: 'clinicaltrials_gov', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); return []; }
                 const data = await response.json();
                 const studies = data.studies || [];
 
@@ -191,7 +196,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                         relevance_score: computeRelevance(`${title} ${abstract}`, tokens),
                     };
                 }).filter(r => isRelevantLiterature(r, cleanQuery));
-            } catch { return []; }
+            } catch (error) { failures.push({ component: 'clinicaltrials_gov', code: 'NETWORK_ERROR', message: error.message }); return []; }
         };
 
         // 3. OpenFDA (Drug labels, warnings)
@@ -208,7 +213,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                 url.searchParams.append('limit', '1');
 
                 const response = await fetch(url.toString());
-                if (!response.ok) return [];
+                if (!response.ok) { failures.push({ component: 'fda', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); return []; }
                 const data = await response.json();
                 const results = data.results || [];
 
@@ -226,7 +231,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                         relevance_score: computeRelevance(`${r.openfda?.brand_name?.[0] || ''} ${r.openfda?.generic_name?.[0] || ''} ${abstract}`, tokens),
                     };
                 }).filter(r => isRelevantLiterature(r, cleanQuery));
-            } catch { return []; }
+            } catch (error) { failures.push({ component: 'fda', code: 'NETWORK_ERROR', message: error.message }); return []; }
         };
 
         const tasks = [fetchPMC(true), fetchPMC(false)];
@@ -236,15 +241,35 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
 
         // Prioritize newest 2024+ evidence first, followed by foundational consensus
         const allRefs = [...pmcLatest, ...pmcFoundational, ...trials, ...fda];
-        return allRefs.slice(0, 6); // Limit total context size
-    } catch {
-        return [];
+        return { items: allRefs.slice(0, 6), failures }; // Limit total context size
+    } catch (error) {
+        failures.push({ component: 'aggregate', code: 'NETWORK_ERROR', message: error.message });
+        return { items: [], failures };
     }
+}
+
+/**
+ * Strict fetcher for the v2 evidence pipeline: returns structured failures
+ * alongside items so a totally failed source fetch is REPORTED, not silently
+ * swallowed into [] (spec §95). Legacy fetchClinicalLiterature keeps the
+ * items-only contract for chatRoutes v1 callers.
+ */
+async function fetchClinicalLiteratureStrict(query, specialtyId, options = {}) {
+    return fetchClinicalLiterature(query, specialtyId, options);
+}
+
+/**
+ * Legacy items-only wrapper (chatRoutes v1 keeps its existing behavior).
+ */
+async function fetchClinicalLiteratureLegacy(query, specialtyId, options = {}) {
+    const { items } = await fetchClinicalLiterature(query, specialtyId, options);
+    return items;
 }
 
 module.exports = {
     fetchMedicalKnowledge,
-    fetchClinicalLiterature,
+    fetchClinicalLiterature: fetchClinicalLiteratureLegacy,
+    fetchClinicalLiteratureStrict,
     getQueryTokens,
     computeRelevance,
 };

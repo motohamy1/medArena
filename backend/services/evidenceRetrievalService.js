@@ -1,5 +1,5 @@
 const { searchPubMed } = require('./pubmedService');
-const { fetchClinicalLiterature, getQueryTokens, computeRelevance } = require('./medicalSearchService');
+const { fetchClinicalLiteratureStrict, getQueryTokens, computeRelevance } = require('./medicalSearchService');
 const { searchInternalKnowledge } = require('./knowledgeService');
 const { rankEvidence, selectEvidence } = require('./evidenceRankingService');
 const { createEvidenceError } = require('./evidenceErrors');
@@ -122,9 +122,18 @@ async function fetchFromSource(sourcePlan, queryText, query, { broad = false } =
     if (sourcePlan.source_id === 'pubmed') return (await searchPubMed(queryText, { limit: sourcePlan.max_candidates })).map(normalizeLegacyResult);
     // Each planned source fetches only its own component; the aggregate fetcher
     // otherwise drags trials/FDA into plans that never asked for them.
-    if (sourcePlan.source_id === 'europe_pmc') return (await fetchClinicalLiterature(queryText, query.category || 'physicians', { broad, includeTrials: false, includeFda: false })).map(normalizeLegacyResult);
-    if (sourcePlan.source_id === 'clinicaltrials_gov') return (await fetchClinicalLiterature(queryText, query.category || 'physicians', { broad, includeFda: false })).map(normalizeLegacyResult);
-    if (sourcePlan.source_id === 'fda') return (await fetchClinicalLiterature(queryText, query.category || 'physicians', { broad, includeTrials: false })).map(normalizeLegacyResult);
+    // Strict fetch: structured failures surface through executeSourceCall
+    // instead of a silent [] (spec §95). "NO_RESULTS" (a legitimately empty
+    // search) is NOT a failure — only network/HTTP problems throw.
+    const strictFetch = async (sourceId, options) => {
+        const { items, failures } = await fetchClinicalLiteratureStrict(queryText, query.category || 'physicians', options);
+        const hardFailures = failures.filter((f) => f.code !== 'NO_RESULTS');
+        if (!items.length && hardFailures.length) throw createEvidenceError('SOURCE_UNAVAILABLE', `${sourceId} failed: ${hardFailures.map((f) => f.code).join(',')}`, hardFailures);
+        return items.map(normalizeLegacyResult);
+    };
+    if (sourcePlan.source_id === 'europe_pmc') return strictFetch('europe_pmc', { broad, includeTrials: false, includeFda: false });
+    if (sourcePlan.source_id === 'clinicaltrials_gov') return strictFetch('clinicaltrials_gov', { broad, includeFda: false });
+    if (sourcePlan.source_id === 'fda') return strictFetch('fda', { broad, includeTrials: false });
     return [];
 }
 
