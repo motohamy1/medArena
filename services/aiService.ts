@@ -8,8 +8,8 @@ const BACKEND_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   'https://medarena-33zm.onrender.com';
 
-const GEMINI_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-const GROQ_KEY = process.env.EXPO_PUBLIC_GROQ_API_KEY;
+// Spec V2.1 §V2.1.6 / §49 Stage D: provider keys stay backend-only. The
+// client never calls Gemini/Groq (or any model provider) directly.
 
 // A dev-machine backend (localhost/LAN IP over cleartext http) is unreachable
 // from a release build: mobile data can't route 192.168.x.x and Android blocks
@@ -30,127 +30,6 @@ export type Citation = {
   year: string;
   url: string;
 };
-
-// ──────────────────────────────────────────────────────────────────────
-// HYBRID RAG SYSTEM PROMPT
-// PRIORITIZES retrieved context, supplements with medical knowledge.
-// NEVER refuses a legitimate clinical question.
-// ──────────────────────────────────────────────────────────────────────
-const CLINICAL_SYSTEM_PROMPT = `You are Medical Arena AI, a board-certified clinical decision support assistant designed exclusively for physicians, surgeons, and healthcare practitioners.
-Your core mission is to deliver accurate, actionable, evidence-based clinical guidance grounded in the most authoritative sources available.
-
-### EVIDENCE GROUNDING STRATEGY (HYBRID RAG):
-1. **PRIMARY SOURCE**: When RETRIEVED EVIDENCE CONTEXT is provided below, you MUST prioritize it as your primary source. Use inline bracketed citations [1], [2], [3] to reference the specific retrieved sources.
-2. **SUPPLEMENTARY KNOWLEDGE**: If the retrieved context does not fully cover the question, you MUST still provide a complete, high-quality clinical answer by supplementing with your established medical knowledge from authoritative guidelines (e.g., ADA, AHA/ACC, ESC, WHO, NICE, IDSA, KDIGO, GINA, UpToDate). Clearly cite these guideline names and years.
-3. **NEVER REFUSE**: You must ALWAYS provide a substantive clinical answer to any legitimate medical question. Never say "I cannot answer" or "the database does not contain this topic." You are a clinical decision support system — physicians depend on you.
-4. **MANDATORY REFERENCES**: At the very end of your clinical response (BEFORE ##SUGGESTIONS##), include a ##REFERENCES## block:
-##REFERENCES##
-[1] Title | Author/Society | Journal | Year | URL_or_PMID
-[2] Title | Author/Society | Journal | Year | URL_or_PMID
-##END_REFERENCES##
-
-### 1. DYNAMIC PRESENTATION & NATURAL STRUCTURE:
-- **MATCH RESPONSE STRUCTURE TO QUESTION COMPLEXITY**:
-  * **Short / Direct / Factual queries** (e.g., "What's the pediatric dose of paracetamol?", "Is ciprofloxacin safe in pregnancy?", "What is the target blood pressure in CKD?"):
-    Deliver a concise, direct, high-impact clinical response in 1-2 paragraphs or bullet points. DO NOT force artificial section headers like "CLINICAL ASSESSMENT" or "MANAGEMENT PROTOCOL".
-  * **Complex / Multi-phase Clinical Protocols** (e.g., "Full management of severe DKA in adolescents", "Differential diagnosis and workup of acute chest pain"):
-    Organize the response into 2-3 logical, content-specific sections using:
-    ##SECTION: CONTEXT_SPECIFIC_HEADING##
-    (Examples: ##SECTION: INITIAL STABILIZATION##, ##SECTION: WEIGHT-BASED INSULIN INFUSION##, ##SECTION: ELECTROLYTE MONITORING##).
-  * **Follow-up / Clarification questions** (e.g., "What if potassium is 3.1?", "طب وبديله ايه للحامل؟"):
-    Answer directly and conversationally referencing the prior patient context without unnecessary section headers.
-
-### 2. ARABIC & EGYPTIAN DIALECT INTELLIGENCE:
-- **Language Matching**: If the user asks in Arabic or colloquial Egyptian (العامية المصرية), respond in clear, professional medical Arabic that naturally aligns with their tone.
-- **Terminology**: Use standard medical Arabic for clinical rationale while keeping drug names, brand/generic pairings, laboratory units, and scores in English or parenthesized English (e.g., "باراسيتامول (Paracetamol)", "أوجمنتين (Amoxicillin-Clavulanate)").
-- **Cultural & Clinical Nuance**: Deeply understand Egyptian colloquial medical complaints (e.g., "سخونية", "مغص كلوي", "نهجان", "ترجيع", "كرشة نفس", "كتافلام", "انتينال") and provide precise clinical guidance.
-
-### 3. SESSION CONTINUITY & DEMOGRAPHIC PRESERVATION:
-- **Preserve Established Context**: When the user asks a follow-up question, interpret it strictly within the active clinical topic and patient demographic established in previous messages (e.g. pediatric age 10-18y H. pylori eradication).
-- Never reset to generic adult cases unless the user explicitly introduces a completely new patient.
-- **Pediatric Safety**: Explicitly state age and weight cutoffs (e.g., Tetracycline contraindicated <8y, Aspirin contraindicated in viral febrile illness, Fluoroquinolones pediatric restrictions).
-
-### 4. FORMATTING RULES:
-- **No Markdown Tables**: Never use markdown tables (| or ---). Use clean bullet points:
-  - **Drug Name**: Dosage | Route | Frequency | Duration/Notes
-- **No Internal Thinking**: DO NOT include thinking tags or reasoning chains. Output only the clinical response.
-- At the very end, provide 2-3 focused clinical follow-up prompts using:
-  ##SUGGESTIONS##
-  - [Follow-up prompt 1]
-  - [Follow-up prompt 2]`;
-
-// ──────────────────────────────────────────────────────────────────────
-// ROBUST RESPONSE PARSING: extracts reply, suggestions, and CITATIONS
-// ──────────────────────────────────────────────────────────────────────
-function cleanAIResponse(text: string, ragSources: RAGSource[]): { reply: string; suggestions: string[]; citations: Citation[]; knowledgeUpdate?: string } {
-  // 1. Strip reasoning/think tags (DeepSeek, Qwen, Llama reasoning)
-  let replyText = text
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
-    .replace(/^Thinking Process:[\s\S]*?\n\n/i, '')
-    .replace(/^Here's a thinking process:[\s\S]*?\n\n/i, '')
-    .trim();
-
-  let suggestions: string[] = [];
-  let citations: Citation[] = [];
-  let knowledgeUpdate: string | undefined = undefined;
-
-  // 2. Extract ##KNOWLEDGE_UPDATE## section (Active Learning)
-  const updateMatch = replyText.match(/##KNOWLEDGE_UPDATE##([\s\S]*?)##END_UPDATE##/i);
-  if (updateMatch && updateMatch[1]) {
-    knowledgeUpdate = updateMatch[1].trim();
-    replyText = replyText.replace(/##KNOWLEDGE_UPDATE##[\s\S]*?##END_UPDATE##/gi, '').trim();
-  }
-
-  // 3. Extract ##REFERENCES## section and build Citation objects
-  const refMatch = replyText.match(/##REFERENCES##([\s\S]*?)##END_REFERENCES##/i);
-  if (refMatch && refMatch[1]) {
-    const refLines = refMatch[1].trim().split('\n').filter((l: string) => l.trim().length > 3);
-    citations = refLines.map((line: string, idx: number) => {
-      // Parse format: [1] Title | Author | Journal | Year | URL
-      const cleaned = line.replace(/^\s*\[?\d+\]?\s*/, '').trim();
-      const parts = cleaned.split('|').map((p: string) => p.trim());
-      return {
-        id: (idx + 1).toString(),
-        title: parts[0] || 'Clinical Guideline',
-        author: parts[1] || 'Guideline Committee',
-        journal: parts[2] || 'Evidence-Based Practice',
-        year: parts[3] || new Date().getFullYear().toString(),
-        url: parts[4] || 'https://pubmed.ncbi.nlm.nih.gov/',
-      };
-    }).filter((c: Citation) => c.title.length > 3);
-
-    replyText = replyText.replace(/##REFERENCES##[\s\S]*?##END_REFERENCES##/gi, '').trim();
-  }
-
-  // 4. If AI didn't output ##REFERENCES## block, build citations from RAG sources
-  if (citations.length === 0 && ragSources.length > 0) {
-    citations = ragSources.slice(0, 5).map((src, idx) => ({
-      id: (idx + 1).toString(),
-      title: src.title,
-      author: src.author || src.guidelineSociety || 'Guideline Committee',
-      journal: src.journal || 'Clinical Practice Guidelines',
-      year: src.year || new Date().getFullYear().toString(),
-      url: src.url || src.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${src.pmid}/` : 'https://pubmed.ncbi.nlm.nih.gov/',
-    }));
-  }
-
-  // 5. Extract ##SUGGESTIONS## section
-  const sugMatch = replyText.match(/##SUGGESTIONS##([\s\S]*?)(?:##END##|$)/i);
-  if (sugMatch && sugMatch[1]) {
-    suggestions = sugMatch[1]
-      .split('\n')
-      .map((line) => line.replace(/^[\s•\-*0-9.)]+/, '').replace(/##/g, '').trim())
-      .filter((line) => line.length > 3 && !line.toUpperCase().includes('END') && !line.toUpperCase().includes('SECTION:'));
-
-    replyText = replyText.split(/##SUGGESTIONS##/i)[0].trim();
-  }
-
-  // 6. Final cleanup of any trailing artifacts
-  replyText = replyText.replace(/##END##/gi, '').trim();
-
-  return { reply: replyText, suggestions, citations, knowledgeUpdate };
-}
 
 // ──────────────────────────────────────────────────────────────────────
 // RAG SOURCE TYPE — tracks provenance for citation generation
@@ -340,13 +219,15 @@ function findLocalContextFuzzy(query: string): { context: string; sources: RAGSo
           const citationLines = section.content.split(/[;.]/).filter((l: string) => l.trim().length > 10);
           for (const cLine of citationLines) {
             const yearMatch = cLine.match(/(\d{4})/);
+            // No fabricated URL here (spec §0.5): citation lines without a
+            // real link are dropped when building user-facing citations.
             sources.push({
               title: cLine.trim().slice(0, 120),
               guidelineSociety: cLine.match(/(ACC|AHA|ESC|WHO|IDSA|KDIGO|GINA|NICE|GOLD|AAP|ESPGHAN|NASPGHAN|SURVIVING SEPSIS|ACOG|FIGO)/i)?.[1] || 'Guideline Committee',
               journal: 'Clinical Practice Guidelines',
               year: yearMatch ? yearMatch[1] : new Date().getFullYear().toString(),
               content: cLine.trim(),
-              url: 'https://pubmed.ncbi.nlm.nih.gov/',
+              url: '',
             });
           }
         }
@@ -406,7 +287,7 @@ async function fetchSupabaseContext(query: string): Promise<{ context: string; s
               journal: 'Medical Arena Database',
               year: new Date().getFullYear().toString(),
               content: citSection.content,
-              url: 'https://pubmed.ncbi.nlm.nih.gov/',
+              url: '',
             });
           }
         }
@@ -543,158 +424,14 @@ async function fetchChatRAGContext(query: string, specialtyId?: string): Promise
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// DIRECT LLM API CALLS (with RAG context injection)
+// DIRECT LLM API CALLS — REMOVED (spec V2.1 §V2.1.6 / §49 Stage D):
+// the mobile app must not bypass the backend evidence engine by calling
+// model providers directly. Clinical answers come only from the backend.
 // ──────────────────────────────────────────────────────────────────────
 
-/**
- * Direct Groq API execution (Fast inference)
- */
-async function callGroqDirect(prompt: string, context?: string, history: { role: 'user' | 'assistant'; content: string }[] = []): Promise<string | null> {
-  if (!GROQ_KEY) return null;
-  const models = ['qwen/qwen3.8-27b', 'allam-2-7b', 'groq/compound-mini'];
-
-  const systemContent = context
-    ? `${CLINICAL_SYSTEM_PROMPT}\n\n=== RETRIEVED EVIDENCE CONTEXT (USE ONLY THIS) ===\n${context}\n=== END OF RETRIEVED EVIDENCE ===`
-    : CLINICAL_SYSTEM_PROMPT;
-
-  const messages = [
-    { role: 'system', content: systemContent },
-    ...history.slice(-8),
-    { role: 'user', content: prompt },
-  ];
-
-  for (const model of models) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${GROQ_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: messages.slice(-10), // Keep system + last 9 interactions
-          max_tokens: 3000,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.choices?.[0]?.message?.content?.trim();
-        if (text) return text;
-      }
-    } catch {
-      // Try next model
-    }
-  }
-  return null;
-}
-
-/**
- * Direct Gemini API execution using native REST fetch (no Node SDK / Hermes dependency issues)
- */
-async function callGeminiDirect(prompt: string, context?: string, historyText?: string): Promise<string | null> {
-  if (!GEMINI_KEY) return null;
-  const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
-
-  const systemBlock = context
-    ? `${CLINICAL_SYSTEM_PROMPT}\n\n=== RETRIEVED EVIDENCE CONTEXT (USE ONLY THIS) ===\n${context}\n=== END OF RETRIEVED EVIDENCE ===`
-    : CLINICAL_SYSTEM_PROMPT;
-
-  const fullPrompt = `${systemBlock}${historyText ? `\n\nCONVERSATION HISTORY:\n${historyText}` : ''}\n\nCLINICAL QUESTION:\n${prompt}`;
-
-  for (const model of models) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: fullPrompt }] }],
-          generationConfig: { maxOutputTokens: 3500 },
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) return text;
-      }
-    } catch (err) {
-      console.warn(`[Direct Gemini ${model}]`, err);
-    }
-  }
-  return null;
-}
-
 // ──────────────────────────────────────────────────────────────────────
-// OFFLINE FALLBACK (unchanged — uses local knowledge only)
+// OFFLINE FALLBACK (uses bundled local knowledge only — no model calls)
 // ──────────────────────────────────────────────────────────────────────
-
-/**
- * Offline Local Knowledge Synthesis
- */
-function getOfflineFallbackReply(query: string): { reply: string; citations: Citation[]; suggestions: string[] } {
-  const q = query.trim().toLowerCase();
-  const commonConversational = /^(hi|hello|hey|good\s*(morning|evening|afternoon)|thanks|thank\s*you|who\s*are\s*you|help|test)$/i;
-
-  if (commonConversational.test(q)) {
-    return {
-      reply: `Hello, Doctor. I am Medical Arena AI, your clinical decision support assistant. How can I assist you with clinical guidelines, drug dosages, or patient management protocols today?`,
-      citations: [],
-      suggestions: [
-        'Pediatric paracetamol dosing',
-        'Acute coronary syndrome initial protocol',
-        'DKA management guidelines',
-      ],
-    };
-  }
-
-  // Use the fuzzy matcher for offline too
-  const { context, sources } = findLocalContextFuzzy(query);
-
-  if (context) {
-    const citations: Citation[] = sources.slice(0, 5).map((src, idx) => ({
-      id: (idx + 1).toString(),
-      title: src.title,
-      author: src.guidelineSociety || src.author || 'Clinical Guideline Committee',
-      journal: src.journal || 'Evidence-Based Practice',
-      year: src.year || '2024',
-      url: src.url || 'https://pubmed.ncbi.nlm.nih.gov/',
-    }));
-
-    // Extract the topic title from the first match
-    const titleMatch = context.match(/VERIFIED CLINICAL PROTOCOL[^:]*:\s*([^\]]+)\]/);
-    const topicTitle = titleMatch ? titleMatch[1].trim() : query;
-
-    return {
-      reply: `##GREETING##\nHere is the verified guideline protocol for **${topicTitle}** from the bundled Clinical Knowledge Base:\n##END##\n\n${context}`,
-      citations,
-      suggestions: [
-        `What are the first-line dosages for ${topicTitle}?`,
-        `Contraindications and high-risk pitfalls in ${topicTitle}`,
-        `Stepwise escalation protocol for refractory cases`,
-      ],
-    };
-  }
-
-  return {
-    reply: `##SECTION: CLINICAL ASSESSMENT##\nRegarding: **${query}**\n*Note: High-speed AI is currently unavailable. Using offline clinical baseline.*\n\nThis is an evidence-based clinical query. Please consult standard guideline protocols.\n\n##SECTION: MANAGEMENT PROTOCOL##\n• Initiate structured ABCDE evaluation and stabilize vitals.\n• Obtain targeted labs, imaging, and 12-lead ECG where appropriate.\n• Refer to subspecialty guideline algorithms.\n\n##SECTION: CLINICAL PEARLS & PITFALLS##\n• Never delay emergent resuscitation for diagnostic confirmations.\n• Re-evaluate hemodynamic and neurological status frequently.`,
-    citations: [],
-    suggestions: [
-      'COPD GOLD 2024 management protocol',
-      'Acute Coronary Syndrome initial workup',
-      'Sepsis 1-hour resuscitation bundle',
-    ],
-  };
-}
 
 // ──────────────────────────────────────────────────────────────────────
 // PUBLIC SERVICE — sendMessageByText now uses full RAG pipeline
@@ -747,14 +484,19 @@ export const aiService = {
           sourceType: 'system_failure',
         };
       }
-      const citations: Citation[] = sources.slice(0, 5).map((src, idx) => ({
-        id: (idx + 1).toString(),
-        title: src.title,
-        author: src.guidelineSociety || src.author || 'Clinical Guideline Committee',
-        journal: src.journal || 'Evidence-Based Practice',
-        year: src.year || '2024',
-        url: src.url || 'https://pubmed.ncbi.nlm.nih.gov/',
-      }));
+      // Spec §0.5 (no fake citations): only surface bundled sources that have
+      // a real URL/PMID; never synthesize placeholder links or defaults.
+      const citations: Citation[] = sources
+        .filter((src) => Boolean(src.url || src.pmid))
+        .slice(0, 5)
+        .map((src, idx) => ({
+          id: (idx + 1).toString(),
+          title: src.title,
+          author: src.guidelineSociety || src.author || 'Med Arena Bundled Knowledge Base',
+          journal: src.journal || 'Med Arena Bundled Knowledge Base',
+          year: src.year || '',
+          url: src.url || (src.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${src.pmid}/` : ''),
+        }));
       const titleMatch = context.match(/VERIFIED CLINICAL PROTOCOL[^:]*:\s*([^\]]+)\]/);
       const topicTitle = titleMatch ? titleMatch[1].trim() : normalizedMessage;
       return {
@@ -823,228 +565,17 @@ export const aiService = {
 };
 
 // ──────────────────────────────────────────────────────────────────────
-// CLINICAL PEARLS (unchanged — keeps existing RAG pipeline for pearls)
+// CLINICAL PEARLS — bundled miner only (spec V2.1 §V2.1.6): pearls were the
+// last client path that called model providers directly. All generation now
+// stays backend-side; the client mines its curated bundled knowledge base.
 // ──────────────────────────────────────────────────────────────────────
-
-function parsePearlsJSON(raw: string): import('../constants/DailyPearlsData').ClinicalPearl[] | null {
-  try {
-    let clean = raw.trim();
-    if (clean.startsWith('```')) {
-      clean = clean.replace(/^```(?:json)?\n?/, '').replace(/```$/, '').trim();
-    }
-    // Sometimes models output text before the JSON array
-    const jsonStart = clean.indexOf('[');
-    const jsonEnd = clean.lastIndexOf(']');
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      clean = clean.slice(jsonStart, jsonEnd + 1);
-    }
-
-    const arr = JSON.parse(clean);
-    if (!Array.isArray(arr)) return null;
-
-    return arr
-      .map((item: any, idx: number) => {
-        const specId = String(item.specialtyId || item.specialty_id || 'general').toLowerCase().replace(/\s+/g, '_').trim();
-        const rule = String(item.rule || item.takeaway || item.pearl || item.clinical_pearl || item.description || '');
-        const action = String(item.action || item.stepwise_action || item.management || '');
-        const pitfall = String(item.pitfall || item.trap || item.warning || '');
-        const title = String(item.title || item.topic || 'Clinical Pearl');
-
-        return {
-          id: item.id || `pearl_dyn_${Date.now()}_${idx}`,
-          title,
-          category: String(item.category || item.domain || 'Clinical Protocol'),
-          specialtyId: specId,
-          specialtyName: String(item.specialtyName || item.specialty_name || (specId.charAt(0).toUpperCase() + specId.slice(1))),
-          specialtyColor: String(item.specialtyColor || item.specialty_color || '#3B82F6'),
-          specialtyIcon: String(item.specialtyIcon || item.specialty_icon || 'medkit'),
-          badge: String(item.badge || item.key_numbers || item.key_metric || 'Key Threshold'),
-          rule: rule || action,
-          action: action || rule,
-          pitfall,
-          citation: String(item.citation || 'Clinical Practice Guidelines'),
-        };
-      })
-      .filter((p) => p.title && (p.rule || p.action));
-  } catch (e) {
-    console.warn('[parsePearlsJSON] Failed to parse JSON:', e);
-    return null;
-  }
-}
-
-async function callGroqForPearls(prompt: string): Promise<import('../constants/DailyPearlsData').ClinicalPearl[] | null> {
-  if (!GROQ_KEY) return null;
-  const models = ['qwen/qwen3.8-27b', 'groq/compound-mini', 'allam-2-7b'];
-
-  for (const model of models) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${GROQ_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a Senior Medical Professor. Output ONLY a valid raw JSON array of objects with keys: id, title, category, specialtyId, specialtyName, specialtyColor, specialtyIcon, badge, rule, action, pitfall, citation. Do not include markdown ticks or explanation.',
-            },
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: 2800,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.choices?.[0]?.message?.content?.trim();
-        if (text) {
-          const parsed = parsePearlsJSON(text);
-          if (parsed && parsed.length > 0) return parsed;
-        }
-      }
-    } catch {}
-  }
-  return null;
-}
-
-async function callGeminiForPearls(prompt: string): Promise<import('../constants/DailyPearlsData').ClinicalPearl[] | null> {
-  if (!GEMINI_KEY) return null;
-  const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
-
-  for (const model of models) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-          },
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) {
-          const parsed = parsePearlsJSON(text);
-          if (parsed && parsed.length > 0) return parsed;
-        }
-      }
-    } catch (err) {
-      console.warn(`[Direct Gemini Pearls ${model}]`, err);
-    }
-  }
-  return null;
-}
-
-async function fetchUpToDateRAGContext(specialtyId?: string): Promise<string> {
-  let context = '';
-  const currentYear = new Date().getFullYear();
-  const domain = specialtyId && specialtyId !== 'all' ? specialtyId : 'clinical practice guidelines';
-
-  // 1. Live Europe PMC / PubMed Practice Guidelines (2023 - present)
-  try {
-    const query = `(${domain}) AND (PUB_TYPE:"Practice Guideline" OR PUB_TYPE:"Consensus Development Conference") AND (PUB_YEAR:[2023 TO ${currentYear}])`;
-    const res = await fetch(
-      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(query)}&format=json&resultType=core&pageSize=3&sort=P_PDATE_D%20desc`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const results = data.resultList?.result || [];
-      for (const r of results) {
-        if (r.title && r.abstractText) {
-          const clean = r.abstractText.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 500);
-          context += `\n[LATEST GUIDELINE (${r.pubYear || '2024'}) - ${r.journalTitle || 'Medical Journal'}]:\nTitle: ${r.title}\nKey Findings: ${clean}\nCitation: ${r.journalTitle || 'Guideline Consensus'} (${r.pubYear || '2024'})\n`;
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('[RAG] Europe PMC query skipped:', e);
-  }
-
-  // 2. Fetch verified clinical protocol excerpts from local knowledge/Supabase
-  try {
-    const { supabase } = await import('../lib/supabase');
-    let q = supabase.from('specialty_topics').select('title, subtitle, clinical_content');
-    if (specialtyId && specialtyId !== 'all') {
-      q = q.eq('specialty_id', specialtyId);
-    }
-    const { data } = await q.limit(2);
-    if (data && data.length > 0) {
-      for (const t of data) {
-        const pitfall = t.clinical_content?.find((c: any) => c.title?.toLowerCase().includes('pitfall'))?.content;
-        const dosing = t.clinical_content?.find((c: any) => c.title?.toLowerCase().includes('dosing') || c.title?.toLowerCase().includes('pharmacotherapy'))?.content;
-        context += `\n[VERIFIED DATABASE PROTOCOL: ${t.title}]:\nSubtitle: ${t.subtitle}\nDosing: ${dosing?.slice(0, 250) || 'N/A'}\nPitfall: ${pitfall?.slice(0, 250) || 'N/A'}\n`;
-      }
-    }
-  } catch (e) {
-    console.warn('[RAG] Supabase topic context skipped:', e);
-  }
-
-  return context;
-}
 
 export async function generateDynamicPearls(
   specialtyId?: string,
   count: number = 3
 ): Promise<import('../constants/DailyPearlsData').ClinicalPearl[]> {
-  // Fetch up-to-date RAG evidence from PubMed / Europe PMC & database
-  const ragContext = await fetchUpToDateRAGContext(specialtyId);
-
-  const prompt = `You are a Senior Board Examination Author and Master Clinician.
-Generate ${count} authentic, life-saving Clinical Pearls & Tips & Tricks for physicians.
-${specialtyId && specialtyId !== 'all' ? `Generate pearls specifically for the medical specialty: "${specialtyId}".` : 'Select any high-yield clinical specialties or subspecialties dynamically (e.g. Critical Care, Cardiology, Toxicology, Nephrology, Neurology, Pulmonology, Pediatrics, Hematology, Rheumatology, OB/GYN, Surgery, etc.).'}
-
-${ragContext ? `### LATEST RETRIEVED RAG EVIDENCE & RECENT GUIDELINES (2023-2026):\n${ragContext}\nStrictly ground your pearls, exact dosages, cutoffs, and citations in this retrieved evidence where applicable.\n` : ''}
-
-Requirements for each pearl:
-- Must be a true, actionable clinical pearl, drug interaction, physiological principle, or catastrophic pitfall to avoid.
-- Choose a relevant specialtyId (short lowercase slug), specialtyName, a matching hex specialtyColor, and an Ionicons icon name (e.g. heart, pulse, flash, flame, medkit, warning, water, fitness, eye, bandage, shield).
-- Provide an exact badge (key number, cutoff, or ratio).
-- Provide exact rule, stepwise action (with drug doses/timing), and pitfall.
-- Provide a genuine guideline citation with publication year (e.g. 2023-2026).
-
-Return ONLY a valid JSON array of objects with NO markdown formatting:
-[
-  {
-    "id": "pearl_${Date.now()}_1",
-    "title": "Short title (max 5 words)",
-    "category": "Sub-domain or clinical syndrome",
-    "specialtyId": "slug_id",
-    "specialtyName": "Full Specialty Name",
-    "specialtyColor": "#HexColor",
-    "specialtyIcon": "ionicons_name",
-    "badge": "Key metric or cutoff",
-    "rule": "Exact pathophysiological mechanism or core clinical rule (1-2 sentences).",
-    "action": "Immediate exact stepwise action the clinician must take (dosages, route, timing).",
-    "pitfall": "Critical malpractice trap or common lethal mistake to avoid.",
-    "citation": "Official guideline citation (e.g., AHA/ACC 2024, KDIGO 2023, GINA 2024, IDSA 2024, Surviving Sepsis)"
-  }
-]`;
-
-  // 1. Try Groq (Fastest)
-  const groqPearls = await callGroqForPearls(prompt);
-  if (groqPearls && groqPearls.length > 0) return groqPearls;
-
-  // 2. Try Gemini
-  const geminiPearls = await callGeminiForPearls(prompt);
-  if (geminiPearls && geminiPearls.length > 0) return geminiPearls;
-
-  // 3. Fallback to bundled Knowledge Base Miner
+  // Bundled miner only: pearls are derived from the curated local knowledge
+  // base without any client-side model calls (spec V2.1 §V2.1.6).
   const { pearlMinerService } = await import('./pearlMinerService');
   return pearlMinerService.getMinedPearls(specialtyId, count);
 }

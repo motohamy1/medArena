@@ -59,6 +59,23 @@ function dedupeById(items) {
     return merged;
 }
 
+// Spec V2.1 §0.8/A.3: the model call is bounded. A hung provider must not
+// stall the request indefinitely; it becomes MODEL_FAILURE (an abstention,
+// never a memory fallback).
+const COMPOSER_TIMEOUT_MS = Number(process.env.COMPOSER_TIMEOUT_MS || 30000);
+
+function withModelTimeout(promise, ms) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+            const error = new Error(`Composer model exceeded ${ms}ms timeout`);
+            error.code = 'MODEL_FAILURE';
+            reject(error);
+        }, ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 // Spec §58: record the unanswered question for the scientist/review loop.
 // Never block the response on this; gaps are advisory.
 async function recordKnowledgeGap(message, query, requestId) {
@@ -96,6 +113,8 @@ router.post('/', async (req, res) => {
             return res.json(createAbstentionResponse({ status: 'SYSTEM_FAILURE', queryMetadata: query, limitations: ['evidence_source_unavailable'] }));
         }
         let sufficiency = assessEvidenceSufficiency(retrieval.selected, query, { systemFailure: false, conflicts: [] });
+        // Spec V2.1-P observability: record per-source health on every request.
+        logEvent(requestId, 'source_health', { sources: retrieval.sourceHealth });
         logEvent(requestId, 'sufficiency_assessed', { status: sufficiency.status, candidate_count: retrieval.candidates.length, selected_count: retrieval.selected.length, failures: retrieval.failures.length, missing: sufficiency.missing });
 
         // Spec §25 bounded recursive retrieval: one sufficiency-driven round
@@ -122,9 +141,9 @@ router.post('/', async (req, res) => {
         const evidenceContext = buildEvidenceContext(retrieval.selected);
         let draft;
         try {
-            draft = await callAI(buildComposerPrompt(query, evidenceContext, sessionState), message, history);
+            draft = await withModelTimeout(callAI(buildComposerPrompt(query, evidenceContext, sessionState), message, history), COMPOSER_TIMEOUT_MS);
         } catch (error) {
-            logEvent(requestId, 'model_failed', { code: 'MODEL_FAILURE' });
+            logEvent(requestId, 'model_failed', { code: error.code || 'MODEL_FAILURE', message: error.message });
             return res.json(createAbstentionResponse({ status: 'SYSTEM_FAILURE', queryMetadata: query, limitations: ['model_provider_unavailable'] }));
         }
         const response = composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState });

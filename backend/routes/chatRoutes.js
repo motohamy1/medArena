@@ -80,6 +80,12 @@ Hello Doctor! How can I assist you with clinical guidelines, treatment protocols
         const rawKnowledge = (rawKnowledgeRes.status === 'fulfilled' && rawKnowledgeRes.value) ? rawKnowledgeRes.value : '';
         const literatureRefs = (literatureRefsRes.status === 'fulfilled' && Array.isArray(literatureRefsRes.value)) ? literatureRefsRes.value : [];
         const customKnowledgeDocs = (customDocsRes.status === 'fulfilled' && Array.isArray(customDocsRes.value)) ? customDocsRes.value : [];
+
+        // Spec V2.1 §V2.1.2: never convert a source failure into silent
+        // evidence absence — surface it at least in logs.
+        [rawKnowledgeRes, literatureRefsRes, customDocsRes].forEach((settled, i) => {
+            if (settled.status === 'rejected') console.warn(`[Chat] source ${i} failed:`, settled.reason && settled.reason.message);
+        });
         
         let citations = [];
         let literatureContext = '';
@@ -173,7 +179,7 @@ ${personaInstruction}
 YOUR MISSION: Deliver authoritative, peer-level clinical guidance that directly addresses the clinician's or patient's exact question, maintaining clinical pharmacovigilance, demographic continuity, and dynamic formatting.
 
 KNOWLEDGE BASE & GUIDELINES:
-${medicalKnowledgeContext || 'NONE RETRIEVED (AI: Rely on authoritative international guidelines such as WHO, AAP, ESPGHAN, NICE, UpToDate, and Maastricht VI. Explicitly prioritize standard guideline consensus over speculation.)'}
+${medicalKnowledgeContext || 'NO VERIFIED SOURCES RETRIEVED. Evidence retrieval returned no usable sources for this query. You MUST state clearly that you could not retrieve verified evidence for this specific question and recommend consulting current official guidelines directly. Do NOT assert specific clinical facts (doses, thresholds, first-line drugs) from memory as if verified, and do NOT cite any sources.'}
 
 ### 1. DYNAMIC PRESENTATION & SECTION HEADERS:
 - **MATCH RESPONSE STRUCTURE TO QUESTION COMPLEXITY**:

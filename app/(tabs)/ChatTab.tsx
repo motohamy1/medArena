@@ -162,6 +162,27 @@ const FALLBACK_PALETTE = [
   { color: Colors.main, border: "rgba(169, 228, 232, 0.45)" },
 ];
 
+// Spec V2.1 §V2.1.5: evidence badges are server-authoritative. The label and
+// color come from the backend's evidence.status (message.sourceType) — never
+// an unconditional "Evidence-Based" claim rendered by the client.
+const EVIDENCE_BADGES: Record<string, { label: string; color: string }> = {
+  VERIFIED: { label: "Verified", color: Colors.accent },
+  VERIFIED_RECENT: { label: "Verified Recent", color: Colors.accent },
+  CACHED_VERIFIED: { label: "Cached (Verified)", color: Colors.lavender },
+  PARTIAL: { label: "Partial Evidence", color: "#fbbf24" },
+  OUTDATED: { label: "Outdated Evidence", color: "#fbbf24" },
+  CONFLICTING: { label: "Conflicting Evidence", color: Colors.pink },
+  NO_EVIDENCE: { label: "No Evidence", color: Colors.pink },
+  SYSTEM_FAILURE: { label: "System Failure", color: Colors.pink },
+  offline_knowledge: { label: "Offline (Not Live-Verified)", color: "#fbbf24" },
+  conversation: { label: "Assistant", color: "#94a3b8" },
+};
+
+function getEvidenceBadge(sourceType?: string) {
+  if (!sourceType) return null;
+  return EVIDENCE_BADGES[sourceType] || null;
+}
+
 function parseMedicalSections(text: string): {
   hasSections: boolean;
   sections: { heading: string; content: string }[];
@@ -444,9 +465,17 @@ const ChatBubble: React.FC<{
                   <Ionicons name="sparkles" size={13} color={TURQUOISE} />
                 </View>
                 <Text className="text-white text-xs font-sans-bold tracking-wide">Med Arena AI</Text>
-                <View className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
-                  <Text className="text-[10px] text-turquoise font-sans-semibold">Evidence-Based</Text>
-                </View>
+                {(() => {
+                  const badge = getEvidenceBadge(message.sourceType);
+                  if (!badge) return null;
+                  return (
+                    <View className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10">
+                      <Text className="text-[10px] font-sans-semibold" style={{ color: badge.color }}>
+                        {badge.label}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
               <Text className="text-gray-500 text-[10px] font-mono">{message.timestamp}</Text>
             </View>
@@ -549,7 +578,7 @@ const ChatBubble: React.FC<{
 
             {message.citations &&
               message.citations.length > 0 &&
-              ['VERIFIED', 'PARTIAL', 'CONFLICTING'].includes(message.sourceType || '') && (
+              ['VERIFIED', 'VERIFIED_RECENT', 'CACHED_VERIFIED', 'PARTIAL', 'CONFLICTING'].includes(message.sourceType || '') && (
               <View className="mt-3.5 pt-3 border-t border-white/5">
                 <View className="flex-row items-center gap-1.5 mb-2 ml-1">
                   <Ionicons name="book-outline" size={13} color={Colors.lavender} />

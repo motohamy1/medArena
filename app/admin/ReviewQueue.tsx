@@ -17,7 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+// Spec V2.1 §70.2: public HTTPS backend only — no localhost in release builds.
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://medarena-33zm.onrender.com';
 
 type TopicQueueItem = {
   id: string;

@@ -30,6 +30,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/chat/v2', require('./routes/chatV2Routes'));
 app.use('/api/admin', adminRoutes.router);
 app.use('/api/topics', require('./routes/topicRoutes'));
+app.use('/api/system', require('./routes/systemRoutes'));
 
 // Connect Scientist Agent to SSE Broadcaster
 AutonomousScientist.progressCallback = adminRoutes.broadcastScientistProgress;

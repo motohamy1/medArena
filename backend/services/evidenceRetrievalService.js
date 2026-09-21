@@ -3,6 +3,7 @@ const { fetchClinicalLiterature, getQueryTokens, computeRelevance } = require('.
 const { searchCustomKnowledge } = require('./knowledgeService');
 const { rankEvidence, selectEvidence } = require('./evidenceRankingService');
 const { createEvidenceError } = require('./evidenceErrors');
+const { executeSourceCall } = require('./sourceHealthService');
 
 function normalizeInternalKnowledge(rows) {
     // Human-reviewed internal guideline chunks (spec §6 Tier 1 for curated
@@ -61,16 +62,22 @@ async function fetchFromSource(sourcePlan, queryText, query, { broad = false } =
 
 async function retrieveEvidence(plan, query, { forceBroad = false } = {}) {
     const failures = [];
+    const sourceHealth = [];
     const runPlan = async (sourcePlan, { broad = false } = {}) => {
         const variants = (sourcePlan.queries || []).filter(Boolean).slice(0, MAX_QUERY_VARIANTS);
         const collected = [];
         const seenTitles = new Set();
         // Merge results across query variants: each focus query targets a
         // different sub-question, so first-success-only would starve the
-        // composer of the evidence it needs.
+        // composer of the evidence it needs. Each variant fetch is bounded by
+        // its own per-attempt timeout/retry/breaker (spec V2.1 A.3/A.6) — a
+        // slow or failed attempt never blocks the other source families.
         for (const queryText of variants) {
-            try {
-                const items = await fetchFromSource(sourcePlan, queryText, query, { broad: broad || forceBroad });
+            const { result: items, health, error } = await executeSourceCall(sourcePlan.source_id, () =>
+                fetchFromSource(sourcePlan, queryText, query, { broad: broad || forceBroad })
+            );
+            sourceHealth.push(health);
+            if (items) {
                 for (const item of items) {
                     const key = String(item.title || '').toLowerCase();
                     if (key && !seenTitles.has(key)) {
@@ -78,7 +85,7 @@ async function retrieveEvidence(plan, query, { forceBroad = false } = {}) {
                         collected.push(item);
                     }
                 }
-            } catch (error) {
+            } else if (error && !error.skipped) {
                 failures.push({ source_id: sourcePlan.source_id, code: error.code || 'SOURCE_UNAVAILABLE', message: error.message });
             }
             if (collected.length >= 8) break;
@@ -106,7 +113,7 @@ async function retrieveEvidence(plan, query, { forceBroad = false } = {}) {
         }
     }
     if (!candidates.length && failures.length === (plan.plans || []).length) throw createEvidenceError('SOURCE_UNAVAILABLE', 'All planned evidence sources failed', failures);
-    return { candidates, failures, ranked: rankEvidence(candidates, query), selected: selectEvidence(rankEvidence(candidates, query), Math.min(plan.retrieval_budget || 20, 8)) };
+    return { candidates, failures, sourceHealth, ranked: rankEvidence(candidates, query), selected: selectEvidence(rankEvidence(candidates, query), Math.min(plan.retrieval_budget || 20, 8)) };
 }
 
 module.exports = { retrieveEvidence };

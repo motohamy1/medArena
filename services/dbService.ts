@@ -13,7 +13,12 @@ import {
 } from '../constants/SpecialtyData';
 import { Colors } from '../constants/Colors';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.6:3001';
+// Spec V2.1 §70.2: never fall back to localhost/LAN IPs — release builds
+// cannot reach them (cleartext + unroutable). Default to the public backend.
+const BACKEND_URL =
+  process.env.EXPO_PUBLIC_BACKEND_URL ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  'https://medarena-33zm.onrender.com';
 
 const ALL_SPECIALTY_IDS = Object.keys(SPECIALTY_KNOWLEDGE);
 
