@@ -111,8 +111,12 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                 `(${cleanQuery})${categoryFilter}${evidenceSuffix}`,
                 `(${cleanQuery})${categoryFilter}`,
                 `(${core.slice(0, 6).join(' ')})${categoryFilter}`,
+                // OR-relaxation (spec §16): multi-concept AND-queries zero out
+                // ("criteria AND workup AND pancreatitis AND acute"); anchor on
+                // the primary concept and OR the secondary concepts.
+                core.length >= 3 ? `(${core[0]})${categoryFilter} AND (${core.slice(1, 5).map((token) => `"${token}"`).join(' OR ')})` : null,
                 `(${core.slice(0, 3).join(' ')})${categoryFilter}`,
-            ];
+            ].filter(Boolean);
 
             for (const enhancedQuery of variants) {
                 try {
