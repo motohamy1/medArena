@@ -70,6 +70,11 @@ function createRetrievalPlan(query, sessionState = {}, tasks = []) {
         addPlan('guidelines', 'europe_pmc', sourceSpecificQueries('europe_pmc', baseQuery, coreQuery, focusQueries), 20);
         addPlan('literature', 'europe_pmc', sourceSpecificQueries('europe_pmc', baseQuery, coreQuery, focusQueries), 15);
     }
+    // PubMed carries abstracts (spec §20) and materially widens coverage for
+    // diagnosis/workup questions the internal corpus may not hold.
+    if (['diagnosis_question', 'guideline_question', 'clinical_management'].includes(intent)) {
+        addPlan('literature', 'pubmed', sourceSpecificQueries('pubmed', baseQuery, coreQuery, focusQueries), 15);
+    }
     if (['research_question', 'latest_evidence', 'complex_case'].includes(intent)) {
         addPlan('literature', 'pubmed', sourceSpecificQueries('pubmed', baseQuery, coreQuery, focusQueries), 25);
         addPlan('trials', 'clinicaltrials_gov', sourceSpecificQueries('clinicaltrials_gov', baseQuery, coreQuery, focusQueries), 10);

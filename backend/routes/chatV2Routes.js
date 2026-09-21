@@ -12,6 +12,7 @@ const { createAbstentionResponse, createClarificationResponse, buildResponseCont
 const { logEvent } = require('../services/structuredLogger');
 const { extractSessionClinicalState } = require('../services/sessionClinicalState');
 const evidenceCache = require('../services/evidenceCache');
+const { assessDosingSafety } = require('../services/clinicalSafetyGate');
 
 // Pure greetings carry no clinical question; running them through evidence
 // retrieval produces irrelevant registry noise (spec §34: don't dress
@@ -137,6 +138,15 @@ router.post('/', async (req, res) => {
         // plan's budget so a NORMAL request never becomes a 45s spinner.
         const retrievalDeadline = plan.time_budget_ms ? Date.now() + plan.time_budget_ms : null;
         logEvent(requestId, 'retrieval_started', { intent: query.intent, complexity: query.complexity, source_count: plan.plans.length, task_count: tasks.length, max_rounds: plan.max_rounds, time_budget_ms: plan.time_budget_ms });
+
+        // Spec §39/§87: high-risk dosing without clinically necessary inputs
+        // gets a targeted clarification — never a fabricated dose.
+        const dosingSafety = assessDosingSafety(query);
+        if (dosingSafety) {
+            logEvent(requestId, 'dosing_safety_clarification', { reason: dosingSafety.reason, missing: dosingSafety.missing });
+            const clarificationResponse = createClarificationResponse({ clarification: { question: dosingSafety.question }, queryMetadata: query });
+            return res.json({ ...clarificationResponse, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+        }
 
         // Spec §35/§64: canonical-keyed evidence cache. A hit within TTL
         // skips external retrieval entirely; a stale-but-tolerated hit is
