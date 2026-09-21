@@ -10,25 +10,131 @@ const embeddingModel = genAI.getGenerativeModel({ model: 'gemini-embedding-2' })
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 /**
- * Generate an embedding vector for a piece of text.
+ * Generate an embedding vector for a piece of text. Throws on failure so the
+ * caller can distinguish embedding failure from a legitimately empty result
+ * (spec §61/§95: silent [] return is prohibited at the retrieval boundary).
  */
 async function generateEmbedding(text) {
-    try {
-        const result = await embeddingModel.embedContent(text);
-        return result.embedding.values;
-    } catch (error) {
-        console.error("[Embed Error] Failed to generate embedding:", error.message);
-        return null;
+    const result = await embeddingModel.embedContent(text);
+    return result.embedding.values;
+}
+
+/**
+ * Lexical (ILIKE) retrieval over the custom_knowledge table. This is the
+ * fallback path when embedding generation or the vector RPC fails — one
+ * failed retrieval mechanism must not destroy the internal RAG (spec §16/§17).
+ * Client-side ranking with the shared relevance scorer keeps this dependency-
+ * free (no new SQL migration required).
+ */
+async function searchInternalKnowledgeLexical(queryText, matchCount = 5) {
+    const tokens = String(queryText || '')
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+        .split(/\s+/)
+        .filter((token) => token.length > 2);
+    // Longest/most discriminating terms first; ilike OR over top terms.
+    const ranked = tokens.sort((a, b) => b.length - a.length).slice(0, 4);
+    if (!ranked.length) return [];
+    const filter = ranked.map((token) => `content.ilike.%${token}%,title.ilike.%${token}%`).join(',');
+    const { data, error } = await supabase
+        .from('custom_knowledge')
+        .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
+        .eq('is_active', true)
+        .or(filter)
+        .limit(matchCount * 4);
+    if (error) {
+        const err = new Error(`Internal lexical search failed: ${error.message}`);
+        err.code = 'DATABASE_FAILURE';
+        throw err;
     }
+    // Rank client-side by token overlap with the full query.
+    const scored = (data || []).map((row) => {
+        const combined = `${row.title || ''} ${row.content || ''}`.toLowerCase();
+        const hits = ranked.filter((token) => combined.includes(token)).length;
+        return { ...row, similarity: ranked.length ? Number((hits / ranked.length).toFixed(4)) : 0 };
+    }).filter((row) => row.similarity > 0).sort((a, b) => b.similarity - a.similarity);
+    return scored.slice(0, matchCount);
+}
+
+/**
+ * Hybrid internal knowledge search (spec §16–§17):
+ *   1. vector (pgvector RPC)
+ *   2. lexical (ILIKE)  — on embedding failure OR low vector recall
+ *   3. exact title/entity — narrow ILIKE on title only
+ * Returns { items, failures } — failures are structured diagnostics, never a
+ * silent empty array.
+ */
+async function searchInternalKnowledge(queryText, matchCount = 5, matchThreshold = 0.45) {
+    const failures = [];
+    let items = [];
+
+    // 1. Vector path
+    try {
+        const queryEmbedding = await generateEmbedding(queryText);
+        const { data, error } = await supabase.rpc('match_custom_knowledge', {
+            query_embedding: queryEmbedding,
+            match_threshold: matchThreshold,
+            match_count: matchCount,
+        });
+        if (error) {
+            failures.push({ mechanism: 'vector', code: 'DATABASE_FAILURE', message: error.message });
+        } else if (data && data.length) {
+            items = data.map((row) => ({ ...row, similarity: typeof row.similarity === 'number' ? row.similarity : 0.7, retrieval_mechanism: 'vector' }));
+        }
+    } catch (error) {
+        failures.push({ mechanism: 'vector', code: 'EMBEDDING_FAILURE', message: error.message });
+    }
+
+    // 2. Lexical fallback: on embedding/RPC failure OR weak vector recall
+    if (failures.length > 0 || items.length === 0) {
+        try {
+            const lexical = await searchInternalKnowledgeLexical(queryText, matchCount);
+            if (lexical.length) {
+                items = lexical.map((row) => ({ ...row, retrieval_mechanism: 'lexical' }));
+            }
+        } catch (error) {
+            failures.push({ mechanism: 'lexical', code: error.code || 'DATABASE_FAILURE', message: error.message });
+        }
+    }
+
+    // 3. Exact title search: last resort for precisely named guidelines
+    if (items.length === 0) {
+        const probe = String(queryText || '').split(/\s+/).filter((token) => token.length > 5)[0];
+        if (probe) {
+            try {
+                const { data, error } = await supabase
+                    .from('custom_knowledge')
+                    .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
+                    .eq('is_active', true)
+                    .ilike('title', `%${probe}%`)
+                    .limit(matchCount);
+                if (!error && data && data.length) {
+                    items = data.map((row) => ({ ...row, similarity: 0.6, retrieval_mechanism: 'exact_title' }));
+                }
+            } catch (error) {
+                failures.push({ mechanism: 'exact_title', code: 'DATABASE_FAILURE', message: error.message });
+            }
+        }
+    }
+
+    return { items, failures };
 }
 
 /**
  * Perform a similarity search in the Custom Knowledge base.
  * Prioritizes active guidelines and returns rich metadata for attribution.
+ * (Legacy vector-only API preserved for chatRoutes/admin callers; production
+ * /api/chat/v2 uses searchInternalKnowledge instead.)
  */
 async function searchCustomKnowledge(queryText, match_count = 5, match_threshold = 0.45) {
     // 1. Convert user's question to a vector
-    const query_embedding = await generateEmbedding(queryText);
+    let query_embedding;
+    try {
+        query_embedding = await generateEmbedding(queryText);
+    } catch (error) {
+        console.error('[Embed Error] Failed to generate embedding:', error.message);
+        return [];
+    }
     if (!query_embedding) return [];
 
     // 2. Call the Supabase Postgres function
@@ -139,5 +245,7 @@ async function ingestKnowledge(title, text, sourceUrl = '', onProgress = null, m
 
 module.exports = {
     searchCustomKnowledge,
+    searchInternalKnowledge,
+    searchInternalKnowledgeLexical,
     ingestKnowledge
 };

@@ -4,7 +4,7 @@ const { verifyClaims } = require('./claimVerificationService');
 
 function buildEvidenceSource(item) {
     if (!item.id || !item.title || !(item.url || item.pmid || item.doi)) return null;
-    return { id: item.id, source_type: item.source_type || item.sourceType || 'unknown', organization: item.organization || item.authority_source || null, title: item.title, version: item.version_tag || item.version || null, publication_date: item.publication_date || item.year || null, retrieved_at: item.retrieved_at || new Date().toISOString(), url: item.url || null, pmid: item.pmid || null, doi: item.doi || null, excerpt: item.excerpt || item.content || '' };
+    return { id: item.id, source_type: item.source_type || item.sourceType || 'unknown', organization: item.organization || item.authority_source || null, title: item.title, version: item.version_tag || item.version || null, publication_date: item.publication_date || item.year || null, retrieved_at: item.retrieved_at || new Date().toISOString(), url: item.url || null, pmid: item.pmid || null, doi: item.doi || null, excerpt: item.excerpt || item.content || '', evidence_depth: item.evidence_depth || 'abstract', freshness: item.freshness || 'unknown' };
 }
 
 // Spec §4: natural language stays in text; distinct parts additionally land in
@@ -24,14 +24,59 @@ function parseDraftSections(draftText) {
     return sections;
 }
 
-function composeEvidenceAnswer({ query, evidence = [], sufficiency, conflicts = [], limitations = [], draftText, provider, sessionState }) {
-    if (!sufficiency || ['NO_EVIDENCE', 'SYSTEM_FAILURE', 'OUTDATED'].includes(sufficiency.status)) return createAbstentionResponse({ status: sufficiency.status, queryMetadata: query, limitations: sufficiency.missing || limitations });
-    const sources = evidence.map(buildEvidenceSource).filter(Boolean);
-    const claims = verifyClaims(extractMaterialClaims(draftText || ''), evidence, conflicts);
+// Spec §0.5 (pipeline fix): unsupported material claims are REMOVED from the
+// draft before the final response — never kept with an appended disclaimer.
+// Sentences are removed by exact matching against the unsupported claim text.
+function stripUnsupportedClaims(draftText, claims) {
+    let text = String(draftText || '');
     const unsupported = claims.filter((claim) => claim.support_level === 'UNSUPPORTED');
-    const supportedClaims = claims.filter((claim) => claim.support_level !== 'UNSUPPORTED');
-    const answerText = unsupported.length ? `${draftText}\n\nI could not verify every clinical claim from the retrieved sources; unsupported details have been omitted from the evidence record.` : draftText;
-    return buildResponseContract({ answer: { type: query.intent || 'clinical_guidance', text: answerText, sections: parseDraftSections(answerText) }, evidence: { ...sufficiency, checked_at: new Date().toISOString(), freshness: sufficiency.status === 'VERIFIED' ? 'current' : 'mixed', sources_used: sources.length, primary_source_id: sources[0]?.id || null, sufficiency_score: sufficiency.score }, claims: supportedClaims, sources, conflicts, limitations: [...limitations, ...(unsupported.length ? ['some_generated_claims_failed_source_support'] : []), ...(provider ? [] : ['model_provider_not_recorded'])], query_metadata: { ...query, provider: provider || null, patient_context: sessionState || null } });
+    for (const claim of unsupported) {
+        if (!claim.text) continue;
+        const escaped = claim.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Remove the sentence plus surrounding whitespace/newline.
+        text = text.replace(new RegExp(`\\s*${escaped}\\s*`), '\n');
+    }
+    // Clean up artifacts from removals.
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+    return { text, removedCount: unsupported.length };
+}
+
+function composeEvidenceAnswer({ query, evidence = [], sufficiency, conflicts = [], limitations = [], draftText, provider, sessionState, coverage = [] }) {
+    if (!sufficiency || ['NO_EVIDENCE', 'NO_RELEVANT_EVIDENCE', 'SOURCE_UNAVAILABLE', 'SYSTEM_FAILURE', 'OUTDATED'].includes(sufficiency.status)) {
+        return createAbstentionResponse({ status: sufficiency.status || 'NO_RELEVANT_EVIDENCE', queryMetadata: query, limitations: sufficiency.missing || limitations });
+    }
+    const sources = evidence.map(buildEvidenceSource).filter(Boolean);
+    // Numerical/query context feeds the numeric-consistency check (spec §29):
+    // numbers stated by the user are legitimate answer material.
+    const queryContextText = [query.raw_query, JSON.stringify(query.clinical_measurements || {}), JSON.stringify(query.patient || {})].join(' ');
+    const verifiedClaims = verifyClaims(extractMaterialClaims(draftText || ''), evidence, conflicts, queryContextText);
+    const { text: cleanedDraft, removedCount } = stripUnsupportedClaims(draftText, verifiedClaims);
+    const claims = verifiedClaims.filter((claim) => claim.support_level !== 'UNSUPPORTED');
+    const unsupportedLimitation = removedCount > 0 ? 'unverified_claims_removed_from_answer' : null;
+    const finalText = cleanedDraft;
+    const partialCoverage = coverage.some((entry) => entry.coverage === 'partially_supported' || entry.coverage === 'unsupported');
+    const status = sufficiency.status === 'VERIFIED' && partialCoverage ? 'PARTIAL' : sufficiency.status;
+    return buildResponseContract({
+        answer: { type: query.intent || 'clinical_guidance', text: finalText, sections: parseDraftSections(finalText) },
+        evidence: {
+            ...sufficiency,
+            checked_at: new Date().toISOString(),
+            freshness: sufficiency.status === 'VERIFIED' ? 'current' : 'mixed',
+            sources_used: sources.length,
+            primary_source_id: sources[0]?.id || null,
+            sufficiency_score: sufficiency.score,
+        },
+        claims,
+        sources,
+        conflicts,
+        limitations: [
+            ...limitations,
+            ...(unsupportedLimitation ? [unsupportedLimitation] : []),
+            ...(partialCoverage ? ['some_sub_questions_not_covered_by_retrieved_evidence'] : []),
+            ...(provider ? [] : ['model_provider_not_recorded']),
+        ].filter(Boolean),
+        query_metadata: { ...query, provider: provider || null, patient_context: sessionState || null, coverage },
+    });
 }
 
 module.exports = { composeEvidenceAnswer };

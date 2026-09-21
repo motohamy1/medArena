@@ -3,11 +3,12 @@ const { createClient } = require('@supabase/supabase-js');
 const router = express.Router();
 const { callAI } = require('../services/aiService');
 const { interpretClinicalQuery } = require('../services/clinicalQueryInterpreter');
+const { decomposeClinicalTask } = require('../services/clinicalTaskDecomposer');
 const { createRetrievalPlan } = require('../services/retrievalPlanner');
 const { retrieveEvidence } = require('../services/evidenceRetrievalService');
-const { assessEvidenceSufficiency } = require('../services/evidenceSufficiencyService');
+const { assessEvidenceSufficiency, buildCoverageMatrix } = require('../services/evidenceSufficiencyService');
 const { composeEvidenceAnswer } = require('../services/clinicalAnswerComposer');
-const { createAbstentionResponse, buildResponseContract } = require('../models/responseContracts');
+const { createAbstentionResponse, createClarificationResponse, buildResponseContract } = require('../models/responseContracts');
 const { logEvent } = require('../services/structuredLogger');
 const { extractSessionClinicalState } = require('../services/sessionClinicalState');
 
@@ -38,7 +39,7 @@ function composerPolicy(query, sessionState) {
 }
 
 function buildEvidenceContext(evidence) {
-    return evidence.map((item, index) => `[SOURCE ${index + 1} | id=${item.id} | title=${item.title} | url=${item.url || ''}]\n${item.excerpt || item.content}\n[END SOURCE ${index + 1}]`).join('\n\n');
+    return evidence.map((item, index) => `[SOURCE ${index + 1} | id=${item.id} | title=${item.title} | url=${item.url || ''} | freshness=${item.freshness || 'unknown'}]\n${item.excerpt || item.content}\n[END SOURCE ${index + 1}]`).join('\n\n');
 }
 
 // Spec §53 prompt contract. Spec §28: use only sections that materially help;
@@ -88,10 +89,26 @@ async function recordKnowledgeGap(message, query, requestId) {
     }
 }
 
+// Structured error response body (spec §38).
+function sendStructuredError(res, requestId, code, message, retryable, statusCode = 503) {
+    return res.status(statusCode).json({
+        error: { code, message, retryable },
+        request_id: requestId,
+    });
+}
+
 router.post('/', async (req, res) => {
     const requestId = req.requestId || `req_${Date.now()}`;
+    const startedAt = Date.now();
+    const stageTimings = [];
+    const timeStage = (stage, fn) => {
+        const stageStart = Date.now();
+        return Promise.resolve(fn()).finally(() => {
+            stageTimings.push({ stage, duration_ms: Date.now() - stageStart });
+        });
+    };
     const { message, history = [] } = req.body || {};
-    if (!message) return res.status(400).json({ error: 'message is required', code: 'QUERY_PARSE_ERROR', request_id: requestId });
+    if (!message) return sendStructuredError(res, requestId, 'QUERY_PARSE_ERROR', 'message is required', false, 400);
     if (GREETING_PATTERN.test(String(message).trim())) {
         return res.json(buildResponseContract({
             answer: { type: 'conversation', text: 'Hello! How can I help you with a clinical question today?', sections: [] },
@@ -101,32 +118,57 @@ router.post('/', async (req, res) => {
     }
     try {
         logEvent(requestId, 'interpretation_started');
-        const query = interpretClinicalQuery(message, history);
+        const query = await timeStage('parse', async () => interpretClinicalQuery(message, history));
         const sessionState = extractSessionClinicalState(history, message);
-        const plan = createRetrievalPlan(query, sessionState);
-        logEvent(requestId, 'retrieval_started', { intent: query.intent, source_count: plan.plans.length, max_rounds: plan.max_rounds });
+
+        // Spec §43/§105: a materially relevant, unresolved ambiguity asks a
+        // targeted clarification question — never a guess, never NO_EVIDENCE.
+        if (query.clarification_required && query.clarification) {
+            logEvent(requestId, 'clarification_required', { token: query.clarification.token });
+            const clarificationResponse = createClarificationResponse({ clarification: query.clarification, queryMetadata: query });
+            return res.json({ ...clarificationResponse, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+        }
+
+        // Spec §12/§13: decompose into bounded evidence tasks before planning.
+        const tasks = await timeStage('task_decomposition', async () => decomposeClinicalTask(query));
+        const plan = createRetrievalPlan(query, sessionState, tasks);
+        logEvent(requestId, 'retrieval_started', { intent: query.intent, complexity: query.complexity, source_count: plan.plans.length, task_count: tasks.length, max_rounds: plan.max_rounds });
+
         let retrieval;
         try {
-            retrieval = await retrieveEvidence(plan, query);
+            retrieval = await timeStage('retrieval', () => retrieveEvidence(plan, query));
         } catch (error) {
-            logEvent(requestId, 'retrieval_failed', { code: error.code, source_failures: error.cause });
-            return res.json(createAbstentionResponse({ status: 'SYSTEM_FAILURE', queryMetadata: query, limitations: ['evidence_source_unavailable'] }));
+            // Spec §6/§32: SYSTEM_FAILURE (infrastructure) is distinct from
+            // NO_RELEVANT_EVIDENCE (search worked, nothing relevant found).
+            const statusByCode = {
+                EMBEDDING_FAILURE: 'SYSTEM_FAILURE',
+                DATABASE_FAILURE: 'SYSTEM_FAILURE',
+                SOURCE_UNAVAILABLE: 'SOURCE_UNAVAILABLE',
+                RETRIEVAL_TIMEOUT: 'RETRIEVAL_TIMEOUT',
+            };
+            const status = statusByCode[error.code] || 'SOURCE_UNAVAILABLE';
+            logEvent(requestId, 'retrieval_failed', { code: error.code, failures: error.cause });
+            const abstention = createAbstentionResponse({ status, queryMetadata: query, limitations: [error.code === 'EMBEDDING_FAILURE' ? 'embedding_provider_unavailable' : 'evidence_source_unavailable'], retryable: true });
+            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
         }
         let sufficiency = assessEvidenceSufficiency(retrieval.selected, query, { systemFailure: false, conflicts: [] });
         // Spec V2.1-P observability: record per-source health on every request.
         logEvent(requestId, 'source_health', { sources: retrieval.sourceHealth });
         logEvent(requestId, 'sufficiency_assessed', { status: sufficiency.status, candidate_count: retrieval.candidates.length, selected_count: retrieval.selected.length, failures: retrieval.failures.length, missing: sufficiency.missing });
 
-        // Spec §25 bounded recursive retrieval: one sufficiency-driven round
-        // only when the system cannot answer at all (PARTIAL is sufficient to
-        // compose an answer; recursing on it doubles latency for no gain).
-        if (['NO_EVIDENCE', 'OUTDATED'].includes(sufficiency.status) && plan.max_rounds > 1) {
-            logEvent(requestId, 'retrieval_round_2_started', { reason: sufficiency.missing });
-            const round2Query = { ...query, temporal_request: sufficiency.missing.includes('current_evidence') ? 'current' : query.temporal_request };
+        // Spec §21/§31/§35: the retry round CHANGES STRATEGY — it targets the
+        // uncovered sub-questions with task-specific queries (deep retrieval),
+        // falling back to a broad expansion only when no task focus exists.
+        if (['NO_RELEVANT_EVIDENCE', 'NO_EVIDENCE', 'OUTDATED'].includes(sufficiency.status) && plan.max_rounds > 1) {
+            const coverage = buildCoverageMatrix(tasks, retrieval.candidates);
+            const uncovered = coverage.filter((entry) => entry.coverage !== 'supported');
+            const focusTasks = tasks.filter((task) => uncovered.some((entry) => entry.task_id === task.task_id));
+            logEvent(requestId, 'retrieval_round_2_started', { reason: sufficiency.missing, uncovered_tasks: uncovered.map((entry) => entry.task_id) });
             try {
-                const retrieval2 = await retrieveEvidence(plan, round2Query, { forceBroad: true });
+                const round2Query = { ...query, temporal_request: sufficiency.missing.includes('current_evidence') ? 'current' : query.temporal_request };
+                const retrieval2 = await timeStage('retrieval_deep', () => retrieveEvidence(plan, round2Query, { forceBroad: true, focusTasks: focusTasks.length ? focusTasks : null }));
                 const mergedSelected = dedupeById([...retrieval.selected, ...retrieval2.selected]);
-                retrieval = { ...retrieval, selected: mergedSelected, candidates: [...retrieval.candidates, ...retrieval2.candidates] };
+                retrieval = { ...retrieval, selected: mergedSelected, candidates: dedupeById([...retrieval.candidates, ...retrieval2.candidates]), failures: [...retrieval.failures, ...retrieval2.failures] };
                 sufficiency = assessEvidenceSufficiency(mergedSelected, query, { systemFailure: false, conflicts: [] });
                 logEvent(requestId, 'sufficiency_reassessed', { status: sufficiency.status, selected_count: mergedSelected.length });
             } catch (error) {
@@ -134,24 +176,29 @@ router.post('/', async (req, res) => {
             }
         }
 
-        if (['NO_EVIDENCE', 'OUTDATED', 'SYSTEM_FAILURE'].includes(sufficiency.status)) {
-            if (sufficiency.status === 'NO_EVIDENCE') await recordKnowledgeGap(message, query, requestId);
-            return res.json(createAbstentionResponse({ status: sufficiency.status, queryMetadata: query, limitations: sufficiency.missing }));
+        if (['NO_RELEVANT_EVIDENCE', 'NO_EVIDENCE', 'OUTDATED', 'SYSTEM_FAILURE', 'SOURCE_UNAVAILABLE'].includes(sufficiency.status)) {
+            if (sufficiency.status === 'NO_RELEVANT_EVIDENCE' || sufficiency.status === 'NO_EVIDENCE') await recordKnowledgeGap(message, query, requestId);
+            const abstention = createAbstentionResponse({ status: sufficiency.status, queryMetadata: query, limitations: sufficiency.missing, retryable: false });
+            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
         }
+
+        // Coverage matrix drives PARTIAL status + limitations (spec §22/§26).
+        const coverage = buildCoverageMatrix(tasks, retrieval.selected);
         const evidenceContext = buildEvidenceContext(retrieval.selected);
         let draft;
         try {
-            draft = await withModelTimeout(callAI(buildComposerPrompt(query, evidenceContext, sessionState), message, history), COMPOSER_TIMEOUT_MS);
+            draft = await timeStage('composition', () => withModelTimeout(callAI(buildComposerPrompt(query, evidenceContext, sessionState), message, history), COMPOSER_TIMEOUT_MS));
         } catch (error) {
             logEvent(requestId, 'model_failed', { code: error.code || 'MODEL_FAILURE', message: error.message });
-            return res.json(createAbstentionResponse({ status: 'SYSTEM_FAILURE', queryMetadata: query, limitations: ['model_provider_unavailable'] }));
+            const abstention = createAbstentionResponse({ status: 'SYSTEM_FAILURE', queryMetadata: query, limitations: ['model_provider_unavailable'], retryable: true });
+            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
         }
-        const response = composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState });
+        const response = composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState, coverage });
         logEvent(requestId, 'claim_verification_completed', { claims: response.claims.length, sources: response.sources.length, status: response.evidence.status });
-        return res.json({ ...response, request_id: requestId });
+        return res.json({ ...response, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
     } catch (error) {
         logEvent(requestId, 'request_error', { code: error.code || 'VALIDATION_FAILURE' });
-        return res.status(400).json({ error: error.message, code: error.code || 'VALIDATION_FAILURE', request_id: requestId });
+        return sendStructuredError(res, requestId, error.code || 'VALIDATION_FAILURE', error.message, false, 400);
     }
 });
 
