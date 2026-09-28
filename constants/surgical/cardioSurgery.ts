@@ -5,7 +5,7 @@ export const CARDIOTHORACIC_SURGERY_SPECIALTY: SpecialtyData = {
   name: 'Cardiothoracic',
   scientificName: 'Cardiothoracic & Thoracic Surgery',
   icon: 'heart',
-  color: '#6dc2bd', // Teal
+  color: '#877bf4', // Teal
   illustration: require('../../assets/images/specialties/cardiology.jpg'),
   generalScope: 'Comprehensive adult cardiac, congenital, thoracic aortic, pulmonary resections, mediastinal, and cardiopulmonary bypass critical care protocols.',
   categories: [

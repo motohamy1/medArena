@@ -82,7 +82,7 @@ export const KnowledgeMapNodeSheet: React.FC<KnowledgeMapNodeSheetProps> = ({
           accessibilityLabel="Close concept details"
           activeOpacity={0.7}
         >
-          <Ionicons name="close" size={18} color="#94a3b8" />
+          <Ionicons name="close" size={18} color="#8c92a0" />
         </TouchableOpacity>
       </View>
 
@@ -107,7 +107,7 @@ export const KnowledgeMapNodeSheet: React.FC<KnowledgeMapNodeSheetProps> = ({
           accessibilityLabel={`Ask AI about ${node.label}`}
           activeOpacity={0.8}
         >
-          <Ionicons name="sparkles" size={15} color="#010101" />
+          <Ionicons name="sparkles" size={15} color="#08090b" />
           <Text style={styles.primaryButtonText}>Ask AI about this</Text>
         </TouchableOpacity>
 
@@ -120,7 +120,7 @@ export const KnowledgeMapNodeSheet: React.FC<KnowledgeMapNodeSheetProps> = ({
             accessibilityLabel="Focus on node"
             activeOpacity={0.7}
           >
-            <Ionicons name="scan-outline" size={14} color="#e2e8f0" />
+            <Ionicons name="scan-outline" size={14} color="#ccd1dc" />
             <Text style={styles.secondaryButtonText}>Focus</Text>
           </TouchableOpacity>
 
@@ -135,7 +135,7 @@ export const KnowledgeMapNodeSheet: React.FC<KnowledgeMapNodeSheetProps> = ({
               <Ionicons
                 name={isExpanded ? 'contract-outline' : 'expand-outline'}
                 size={14}
-                color="#e2e8f0"
+                color="#ccd1dc"
               />
               <Text style={styles.secondaryButtonText}>
                 {isExpanded ? 'Collapse' : 'Expand'}
@@ -151,7 +151,7 @@ export const KnowledgeMapNodeSheet: React.FC<KnowledgeMapNodeSheetProps> = ({
               accessibilityLabel="Open in Clinical Guide"
               activeOpacity={0.7}
             >
-              <Ionicons name="book-outline" size={14} color="#e2e8f0" />
+              <Ionicons name="book-outline" size={14} color="#ccd1dc" />
               <Text style={styles.secondaryButtonText}>Guide</Text>
             </TouchableOpacity>
           )}
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#0c1214',
+    backgroundColor: '#1a1c20',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.12)',
     borderTopLeftRadius: 22,
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   contextSubtext: {
     fontSize: 11,
     fontFamily: 'PlexSans_500Medium',
-    color: '#7b8188',
+    color: '#8c92a0',
     marginTop: 2,
   },
   closeButton: {
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   summaryText: {
     fontSize: 13,
     fontFamily: 'PlexSans_400Regular',
-    color: '#cbd5e1',
+    color: '#ccd1dc',
     lineHeight: 18,
   },
   actionsContainer: {
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 13.5,
     fontFamily: 'PlexSans_700Bold',
-    color: '#010101',
+    color: '#08090b',
   },
   secondaryRow: {
     flexDirection: 'row',
@@ -288,6 +288,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 11.5,
     fontFamily: 'PlexSans_600SemiBold',
-    color: '#e2e8f0',
+    color: '#ccd1dc',
   },
 });

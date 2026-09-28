@@ -5,7 +5,7 @@ export const UROLOGY_SURGERY_SPECIALTY: SpecialtyData = {
   name: 'Urology',
   scientificName: 'Urological & Pelvic Surgery',
   icon: 'medkit',
-  color: '#6dc2bd', // Teal
+  color: '#877bf4', // Teal
   illustration: require('../../assets/images/specialties/dermatology.jpg'),
   generalScope: 'Comprehensive endourology, laser lithotripsy, robotic urologic oncology, and acute urological emergency surgeries.',
   categories: [

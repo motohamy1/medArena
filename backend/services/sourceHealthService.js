@@ -67,14 +67,24 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Bounded wait on a single attempt. The underlying work is abandoned (not
-// awaited) after the deadline; it is never treated as a global cutoff.
-function withAttemptTimeout(promise, ms) {
+// Bounded wait on one attempt. Abort the actual adapter as well as the race so
+// timed-out fetches do not continue consuming sockets and provider quota.
+function withAttemptTimeout(fn, ms) {
+    const controller = new AbortController();
     let timer;
     const timeout = new Promise((_, reject) => {
-        timer = setTimeout(() => reject(timeoutError(ms)), ms);
+        timer = setTimeout(() => {
+            controller.abort();
+            reject(timeoutError(ms));
+        }, ms);
     });
-    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+    const attempt = Promise.resolve()
+        .then(() => fn({ signal: controller.signal, timeoutMs: ms }))
+        .catch((error) => {
+            if (controller.signal.aborted || error?.name === 'AbortError') throw timeoutError(ms);
+            throw error;
+        });
+    return Promise.race([attempt, timeout]).finally(() => clearTimeout(timer));
 }
 
 function isTransient(error) {
@@ -86,8 +96,8 @@ function isTransient(error) {
  * circuit breaker, and health metadata.
  * @returns {Promise<{result: any, health: object}>}
  */
-async function executeSourceCall(sourceId, fn, { timeoutMs, maxRetries = MAX_RETRIES } = {}) {
-    const effectiveTimeout = timeoutMs || SOURCE_TIMEOUT_MS[sourceId] || DEFAULT_TIMEOUT_MS;
+async function executeSourceCall(sourceId, fn, { timeoutMs, maxRetries = MAX_RETRIES, deadline = null } = {}) {
+    const configuredTimeout = timeoutMs || SOURCE_TIMEOUT_MS[sourceId] || DEFAULT_TIMEOUT_MS;
     const breaker = getBreaker(sourceId);
     const now = Date.now();
 
@@ -106,10 +116,19 @@ async function executeSourceCall(sourceId, fn, { timeoutMs, maxRetries = MAX_RET
     }
 
     let lastError;
+    let attempts = 0;
+    const totalStartedAt = Date.now();
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+        const remaining = deadline ? deadline - Date.now() : configuredTimeout;
+        if (remaining <= 0) {
+            lastError = timeoutError(configuredTimeout);
+            break;
+        }
+        const effectiveTimeout = Math.max(1, Math.min(configuredTimeout, remaining));
         const startedAt = Date.now();
+        attempts += 1;
         try {
-            const result = await withAttemptTimeout(Promise.resolve().then(fn), effectiveTimeout);
+            const result = await withAttemptTimeout(fn, effectiveTimeout);
             recordSuccess(breaker);
             const health = {
                 sourceId,
@@ -125,7 +144,9 @@ async function executeSourceCall(sourceId, fn, { timeoutMs, maxRetries = MAX_RET
             // Clearly invalid requests (4xx semantics, parse errors) are not
             // retried; only transient failures get bounded backoff (spec §43).
             if (!isTransient(error) || attempt === maxRetries) break;
-            await sleep(250 * (attempt + 1));
+            const backoffMs = 250 * (attempt + 1);
+            if (deadline && Date.now() + backoffMs >= deadline) break;
+            await sleep(backoffMs);
         }
     }
 
@@ -133,9 +154,9 @@ async function executeSourceCall(sourceId, fn, { timeoutMs, maxRetries = MAX_RET
     const health = {
         sourceId,
         status: 'unhealthy',
-        latencyMs: undefined,
+        latencyMs: Date.now() - totalStartedAt,
         errorType: (lastError && lastError.code) || 'SOURCE_UNAVAILABLE',
-        attempts: maxRetries + 1,
+        attempts,
         checkedAt: new Date().toISOString(),
     };
     breaker.lastHealth = health;
@@ -157,4 +178,4 @@ function getSourceHealthSnapshot() {
     return snapshot;
 }
 
-module.exports = { executeSourceCall, getSourceHealthSnapshot, SOURCE_TIMEOUT_MS };
+module.exports = { executeSourceCall, getSourceHealthSnapshot, SOURCE_TIMEOUT_MS, withAttemptTimeout };

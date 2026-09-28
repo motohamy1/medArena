@@ -155,7 +155,7 @@ export const KnowledgeMap: React.FC<KnowledgeMapProps> = ({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#010101" />
+      <StatusBar barStyle="light-content" backgroundColor="#08090b" />
 
       {/* Main Interactive Zoom/Pan Canvas */}
       <KnowledgeMapCanvas
@@ -213,7 +213,7 @@ export const KnowledgeMap: React.FC<KnowledgeMapProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#010101',
+    backgroundColor: '#08090b',
     position: 'relative',
     overflow: 'hidden',
   },

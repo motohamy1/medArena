@@ -18,6 +18,9 @@ const SUPPORT_LEVELS = Object.freeze(['SUPPORTED_DIRECT', 'SUPPORTED_INDIRECT', 
 let embeddingModel = null;
 let embeddingInit = false;
 const EMBEDDING_CACHE_MAX = 300;
+const SEMANTIC_VERIFICATION_TIMEOUT_MS = 2500;
+const MAX_SEMANTIC_CLAIMS = 4;
+const MAX_SEMANTIC_EVIDENCE = 4;
 const evidenceEmbeddingCache = new Map();
 
 function getEmbeddingModel() {
@@ -35,10 +38,45 @@ function getEmbeddingModel() {
     return embeddingModel;
 }
 
-async function embedText(text) {
+function embeddingTimeoutError() {
+    return Object.assign(new Error('Semantic claim verification exceeded its time budget'), { code: 'EMBEDDING_TIMEOUT', name: 'AbortError' });
+}
+
+async function withEmbeddingDeadline(operation, timeoutMs = SEMANTIC_VERIFICATION_TIMEOUT_MS) {
+    const controller = new AbortController();
+    let timer;
+    const aborted = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+            controller.abort();
+            reject(embeddingTimeoutError());
+        }, timeoutMs);
+    });
+    try {
+        return await Promise.race([Promise.resolve().then(() => operation(controller.signal)), aborted]);
+    } catch (error) {
+        if (controller.signal.aborted || error?.name === 'AbortError') throw embeddingTimeoutError();
+        throw error;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function embedText(text, { signal, timeoutMs = SEMANTIC_VERIFICATION_TIMEOUT_MS } = {}) {
     const model = getEmbeddingModel();
     if (!model) throw Object.assign(new Error('embedding provider unavailable'), { code: 'EMBEDDING_FAILURE' });
-    const result = await model.embedContent(String(text || '').slice(0, 6000));
+    if (signal?.aborted) throw embeddingTimeoutError();
+    let abortHandler;
+    const aborted = signal && new Promise((_, reject) => {
+        abortHandler = () => reject(embeddingTimeoutError());
+        signal.addEventListener('abort', abortHandler, { once: true });
+    });
+    let result;
+    try {
+        const request = model.embedContent(String(text || '').slice(0, 6000), { timeout: timeoutMs });
+        result = await (aborted ? Promise.race([request, aborted]) : request);
+    } finally {
+        if (abortHandler) signal.removeEventListener('abort', abortHandler);
+    }
     return result.embedding.values;
 }
 
@@ -55,10 +93,10 @@ function cosineSimilarity(a, b) {
     return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-async function getEvidenceEmbedding(item) {
+async function getEvidenceEmbedding(item, options = {}) {
     const cacheKey = item.id || null;
     if (cacheKey && evidenceEmbeddingCache.has(cacheKey)) return evidenceEmbeddingCache.get(cacheKey);
-    const vector = await embedText(`${item.title || ''}\n${String(item.content || item.excerpt || '').slice(0, 3000)}`);
+    const vector = await embedText(`${item.title || ''}\n${String(item.content || item.excerpt || '').slice(0, 3000)}`, options);
     if (cacheKey) {
         if (evidenceEmbeddingCache.size >= EMBEDDING_CACHE_MAX) {
             const oldest = evidenceEmbeddingCache.keys().next().value;
@@ -155,10 +193,13 @@ async function verifyClaimsHybrid(claims, evidence = [], conflicts = [], queryCo
     const diagnostics = { semantic_verification: 'unavailable' };
     if (!base.length || !evidence.length) return { claims: base, diagnostics };
     try {
-        const claimVectors = await Promise.all(base.map((claim) => embedText(claim.text)));
-        const evidenceVectors = await Promise.all(evidence.slice(0, 8).map((item) => getEvidenceEmbedding(item)));
+        const { claimVectors, evidenceVectors } = await withEmbeddingDeadline((signal) => Promise.all([
+            Promise.all(base.slice(0, MAX_SEMANTIC_CLAIMS).map((claim) => embedText(claim.text, { signal, timeoutMs: SEMANTIC_VERIFICATION_TIMEOUT_MS }))),
+            Promise.all(evidence.slice(0, MAX_SEMANTIC_EVIDENCE).map((item) => getEvidenceEmbedding(item, { signal, timeoutMs: SEMANTIC_VERIFICATION_TIMEOUT_MS }))),
+        ]).then(([claimsResult, evidenceResult]) => ({ claimVectors: claimsResult, evidenceVectors: evidenceResult })), SEMANTIC_VERIFICATION_TIMEOUT_MS);
         diagnostics.semantic_verification = 'embedding';
         const enhanced = base.map((claim, claimIndex) => {
+            if (claimIndex >= claimVectors.length) return claim;
             if (claim.support_level === 'CONFLICTING' || (claim.support_level === 'UNSUPPORTED' && claim.reason)) return claim;
             let bestCosine = 0;
             let bestItem = null;
@@ -180,8 +221,8 @@ async function verifyClaimsHybrid(claims, evidence = [], conflicts = [], queryCo
         return { claims: enhanced, diagnostics };
     } catch (error) {
         // Spec §95: degraded, not silent.
-        return { claims: base, diagnostics: { semantic_verification: 'unavailable', semantic_failure: error.code || 'EMBEDDING_FAILURE' } };
+        return { claims: base, diagnostics: { semantic_verification: error.code === 'EMBEDDING_TIMEOUT' ? 'timeout' : 'unavailable', semantic_failure: error.code || 'EMBEDDING_FAILURE' } };
     }
 }
 
-module.exports = { SUPPORT_LEVELS, verifyClaim, verifyClaims, verifyClaimsHybrid, extractNumbers, cosineSimilarity };
+module.exports = { SUPPORT_LEVELS, verifyClaim, verifyClaims, verifyClaimsHybrid, extractNumbers, cosineSimilarity, withEmbeddingDeadline };

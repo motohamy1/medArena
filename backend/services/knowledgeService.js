@@ -23,13 +23,29 @@ function getSupabase() {
  * caller can distinguish embedding failure from a legitimately empty result
  * (spec §61/§95: silent [] return is prohibited at the retrieval boundary).
  */
-async function generateEmbedding(text) {
+function abortedRequestError() {
+    return Object.assign(new Error('Internal knowledge request aborted at retrieval deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
+}
+
+async function generateEmbedding(text, { signal, timeoutMs = 3000 } = {}) {
     if (!embeddingModel) {
         const error = new Error('Embedding provider not configured (GEMINI_API_KEY missing)');
         error.code = 'EMBEDDING_FAILURE';
         throw error;
     }
-    const result = await embeddingModel.embedContent(text);
+    if (signal?.aborted) throw abortedRequestError();
+    let abortHandler;
+    const aborted = signal && new Promise((_, reject) => {
+        abortHandler = () => reject(abortedRequestError());
+        signal.addEventListener('abort', abortHandler, { once: true });
+    });
+    let result;
+    try {
+        const request = embeddingModel.embedContent(text, { timeout: timeoutMs });
+        result = await (aborted ? Promise.race([request, aborted]) : request);
+    } finally {
+        if (abortHandler) signal.removeEventListener('abort', abortHandler);
+    }
     return result.embedding.values;
 }
 
@@ -40,7 +56,8 @@ async function generateEmbedding(text) {
  * Client-side ranking with the shared relevance scorer keeps this dependency-
  * free (no new SQL migration required).
  */
-async function searchInternalKnowledgeLexical(queryText, matchCount = 5) {
+async function searchInternalKnowledgeLexical(queryText, matchCount = 5, { signal } = {}) {
+    if (signal?.aborted) throw abortedRequestError();
     const tokens = String(queryText || '')
         .toLowerCase()
         .replace(/[^\p{L}\p{N}\s]/gu, ' ')
@@ -50,12 +67,14 @@ async function searchInternalKnowledgeLexical(queryText, matchCount = 5) {
     const ranked = tokens.sort((a, b) => b.length - a.length).slice(0, 4);
     if (!ranked.length) return [];
     const filter = ranked.map((token) => `content.ilike.%${token}%,title.ilike.%${token}%`).join(',');
-    const { data, error } = await getSupabase()
+    let request = getSupabase()
         .from('custom_knowledge')
         .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
         .eq('is_active', true)
         .or(filter)
         .limit(matchCount * 4);
+    if (signal && typeof request.abortSignal === 'function') request = request.abortSignal(signal);
+    const { data, error } = await request;
     if (error) {
         const err = new Error(`Internal lexical search failed: ${error.message}`);
         err.code = 'DATABASE_FAILURE';
@@ -78,54 +97,64 @@ async function searchInternalKnowledgeLexical(queryText, matchCount = 5) {
  * Returns { items, failures } — failures are structured diagnostics, never a
  * silent empty array.
  */
-async function searchInternalKnowledge(queryText, matchCount = 5, matchThreshold = 0.45) {
+async function searchInternalKnowledge(queryText, matchCount = 5, matchThreshold = 0.45, { signal } = {}) {
+    if (signal?.aborted) throw abortedRequestError();
     const failures = [];
     let items = [];
 
     // 1. Vector path
     try {
-        const queryEmbedding = await generateEmbedding(queryText);
-        const { data, error } = await getSupabase().rpc('match_custom_knowledge', {
+        const queryEmbedding = await generateEmbedding(queryText, { signal, timeoutMs: 3000 });
+        let request = getSupabase().rpc('match_custom_knowledge', {
             query_embedding: queryEmbedding,
             match_threshold: matchThreshold,
             match_count: matchCount,
         });
+        if (signal && typeof request.abortSignal === 'function') request = request.abortSignal(signal);
+        const { data, error } = await request;
         if (error) {
             failures.push({ mechanism: 'vector', code: 'DATABASE_FAILURE', message: error.message });
         } else if (data && data.length) {
             items = data.map((row) => ({ ...row, similarity: typeof row.similarity === 'number' ? row.similarity : 0.7, retrieval_mechanism: 'vector' }));
         }
     } catch (error) {
+        if (signal?.aborted || error?.name === 'AbortError' || error?.code === 'RETRIEVAL_TIMEOUT') throw abortedRequestError();
         failures.push({ mechanism: 'vector', code: 'EMBEDDING_FAILURE', message: error.message });
     }
 
     // 2. Lexical fallback: on embedding/RPC failure OR weak vector recall
     if (failures.length > 0 || items.length === 0) {
+        if (signal?.aborted) throw abortedRequestError();
         try {
-            const lexical = await searchInternalKnowledgeLexical(queryText, matchCount);
+            const lexical = await searchInternalKnowledgeLexical(queryText, matchCount, { signal });
             if (lexical.length) {
                 items = lexical.map((row) => ({ ...row, retrieval_mechanism: 'lexical' }));
             }
         } catch (error) {
+            if (signal?.aborted || error?.code === 'RETRIEVAL_TIMEOUT') throw abortedRequestError();
             failures.push({ mechanism: 'lexical', code: error.code || 'DATABASE_FAILURE', message: error.message });
         }
     }
 
     // 3. Exact title search: last resort for precisely named guidelines
     if (items.length === 0) {
+        if (signal?.aborted) throw abortedRequestError();
         const probe = String(queryText || '').split(/\s+/).filter((token) => token.length > 5)[0];
         if (probe) {
             try {
-                const { data, error } = await getSupabase()
+                let request = getSupabase()
                     .from('custom_knowledge')
                     .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
                     .eq('is_active', true)
                     .ilike('title', `%${probe}%`)
                     .limit(matchCount);
+                if (signal && typeof request.abortSignal === 'function') request = request.abortSignal(signal);
+                const { data, error } = await request;
                 if (!error && data && data.length) {
                     items = data.map((row) => ({ ...row, similarity: 0.6, retrieval_mechanism: 'exact_title' }));
                 }
             } catch (error) {
+                if (signal?.aborted || error?.code === 'RETRIEVAL_TIMEOUT') throw abortedRequestError();
                 failures.push({ mechanism: 'exact_title', code: 'DATABASE_FAILURE', message: error.message });
             }
         }

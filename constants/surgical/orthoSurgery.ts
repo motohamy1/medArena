@@ -5,7 +5,7 @@ export const ORTHOPEDIC_SURGERY_SPECIALTY: SpecialtyData = {
   name: 'Orthopedics',
   scientificName: 'Orthopedic & Trauma Surgery',
   icon: 'fitness',
-  color: '#defff9', // Mint
+  color: '#f6dda2', // Mint
   illustration: require('../../assets/images/specialties/pulmonology.jpg'),
   generalScope: 'Comprehensive joint arthroplasty, trauma fracture fixation, intramedullary nailing, arthroscopic sports reconstruction, and orthopedic emergencies.',
   categories: [

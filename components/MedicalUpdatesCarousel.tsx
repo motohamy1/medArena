@@ -25,35 +25,35 @@ const getUpdateTheme = (item: MedicalUpdate) => {
   switch (item.category) {
     case 'Clinical Trial':
       return {
-        color: '#4bc0b8', // Medical Jewel Teal
-        gradient: ['rgba(109, 194, 189, 0.26)', '#0e2427', '#071315'] as const,
-        border: 'rgba(109, 194, 189, 0.45)',
-        shadow: '#4bc0b8',
+        color: '#877bf4', // Medical Jewel Teal
+        gradient: ['rgba(135, 123, 244, 0.26)', '#1d1c34', '#08090b'] as const,
+        border: 'rgba(135, 123, 244, 0.45)',
+        shadow: '#877bf4',
         tagIcon: 'flask' as const,
       };
     case 'Practice Guideline':
       return {
-        color: '#cbc8f5', // Soft Lavender / Periwinkle
-        gradient: ['rgba(203, 200, 245, 0.26)', '#1c1736', '#0c0919'] as const,
-        border: 'rgba(203, 200, 245, 0.45)',
-        shadow: '#cbc8f5',
+        color: '#b0afeb', // Soft Lavender / Periwinkle
+        gradient: ['rgba(176, 175, 235, 0.26)', '#1d1c34', '#1d1c34'] as const,
+        border: 'rgba(176, 175, 235, 0.45)',
+        shadow: '#b0afeb',
         tagIcon: 'ribbon' as const,
       };
     case 'FDA Approval':
       return {
-        color: '#a9e4e8', // Luminous Mint
-        gradient: ['rgba(169, 228, 232, 0.26)', '#133534', '#061716'] as const,
-        border: 'rgba(169, 228, 232, 0.45)',
-        shadow: '#a9e4e8',
+        color: '#f05c4a', // Luminous Mint
+        gradient: ['rgba(240, 92, 74, 0.26)', '#1d1c34', '#061716'] as const,
+        border: 'rgba(240, 92, 74, 0.45)',
+        shadow: '#f05c4a',
         tagIcon: 'checkmark-circle' as const,
       };
     case 'Safety Alert':
     default:
       return {
-        color: '#f9bac9', // Pastel Rose
-        gradient: ['rgba(249, 186, 201, 0.26)', '#381525', '#16070e'] as const,
-        border: 'rgba(249, 186, 201, 0.45)',
-        shadow: '#f9bac9',
+        color: '#eb988a', // Pastel Rose
+        gradient: ['rgba(235, 152, 138, 0.26)', '#321612', '#321612'] as const,
+        border: 'rgba(235, 152, 138, 0.45)',
+        shadow: '#eb988a',
         tagIcon: 'warning' as const,
       };
   }
@@ -120,7 +120,7 @@ export const MedicalUpdatesCarousel: React.FC = () => {
             </View>
 
             <View className="px-2 py-0.5 rounded-full bg-white/10 border border-white/10 flex-row items-center gap-1 flex-shrink-0">
-              <Ionicons name="calendar-outline" size={10} color="#cbd5e1" />
+              <Ionicons name="calendar-outline" size={10} color="#ccd1dc" />
               <Text className="text-[10px] font-sans-medium text-gray-300" style={{ includeFontPadding: false }}>
                 {item.date}
               </Text>
@@ -254,7 +254,7 @@ export const MedicalUpdatesCarousel: React.FC = () => {
                 shadowOpacity: 0.5,
                 shadowRadius: 24,
                 elevation: 16,
-                backgroundColor: '#0c1017',
+                backgroundColor: '#1a1c20',
               }}
             >
               <LinearGradient
@@ -383,8 +383,8 @@ export const MedicalUpdatesCarousel: React.FC = () => {
                       elevation: 6,
                     }}
                   >
-                    <Ionicons name="sparkles" size={16} color="#010101" />
-                    <Text className="text-[#010101] font-sans-bold text-[14px]" style={{ includeFontPadding: false }}>
+                    <Ionicons name="sparkles" size={16} color="#08090b" />
+                    <Text className="text-[#08090b] font-sans-bold text-[14px]" style={{ includeFontPadding: false }}>
                       Consult AI for Deep Analysis
                     </Text>
                   </TouchableOpacity>
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 7,
-    backgroundColor: '#0c1017',
+    backgroundColor: '#1a1c20',
   },
   glassCardGradient: {
     padding: 16,

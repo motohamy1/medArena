@@ -162,7 +162,7 @@ export default function SpecialtyTopicDetailScreen() {
           <Ionicons
             name="book-outline"
             size={13}
-            color={activeTab === 'guide' ? specialty.color : '#8e8e93'}
+            color={activeTab === 'guide' ? specialty.color : '#8c92a0'}
             style={{ marginRight: 4 }}
           />
           <Text
@@ -190,7 +190,7 @@ export default function SpecialtyTopicDetailScreen() {
           <Ionicons
             name="chatbubbles-outline"
             size={13}
-            color={activeTab === 'chat' ? specialty.color : '#8e8e93'}
+            color={activeTab === 'chat' ? specialty.color : '#8c92a0'}
             style={{ marginRight: 4 }}
           />
           <Text
@@ -218,7 +218,7 @@ export default function SpecialtyTopicDetailScreen() {
           <Ionicons
             name="git-network-outline"
             size={13}
-            color={activeTab === 'map' ? specialty.color : '#8e8e93'}
+            color={activeTab === 'map' ? specialty.color : '#8c92a0'}
             style={{ marginRight: 4 }}
           />
           <Text
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
     marginTop: 10,
     marginBottom: 6,
-    backgroundColor: '#121719',
+    backgroundColor: '#23262b',
     padding: 3.5,
     borderRadius: 14,
     borderWidth: 1,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 12,
     fontFamily: 'PlexSans_500Medium',
-    color: '#8e8e93',
+    color: '#8c92a0',
   },
   panelContainer: {
     flex: 1,

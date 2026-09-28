@@ -192,7 +192,7 @@ const ThinkingIndicator: React.FC<{ themeColor: string }> = ({ themeColor }) => 
       >
         <Ionicons name="sparkles" size={13} color={themeColor} />
       </View>
-      <View className="flex-row items-center gap-1.5 bg-[#0e1416] border border-white/10 px-4 py-2.5 rounded-3xl rounded-tl-md">
+      <View className="flex-row items-center gap-1.5 bg-[#1a1c20] border border-white/10 px-4 py-2.5 rounded-3xl rounded-tl-md">
         <Text className="text-gray-400 text-xs font-sans-medium mr-1">Consulting knowledge base</Text>
         <Animated.View className="w-1.5 h-1.5 rounded-full" style={[{ backgroundColor: themeColor }, s1]} />
         <Animated.View className="w-1.5 h-1.5 rounded-full" style={[{ backgroundColor: themeColor }, s2]} />
@@ -258,7 +258,7 @@ const TopicAiMessageItem: React.FC<{
     >
       {/* Centered Segmented Response | Map Switcher */}
       <View className="flex-row justify-center items-center mb-3">
-        <View className="flex-row bg-[#151c1f] p-1 rounded-full border border-white/10 shadow-sm">
+        <View className="flex-row bg-[#23262b] p-1 rounded-full border border-white/10 shadow-sm">
           <TouchableOpacity
             onPress={() => {
               Haptics.selectionAsync();
@@ -272,7 +272,7 @@ const TopicAiMessageItem: React.FC<{
             <Ionicons
               name="document-text-outline"
               size={13}
-              color={responseTab === 'response' ? themeColor : '#8e8e93'}
+              color={responseTab === 'response' ? themeColor : '#8c92a0'}
             />
             <Text
               className={`text-xs font-sans-semibold ${
@@ -296,7 +296,7 @@ const TopicAiMessageItem: React.FC<{
             <Ionicons
               name="git-network-outline"
               size={13}
-              color={responseTab === 'map' ? themeColor : '#8e8e93'}
+              color={responseTab === 'map' ? themeColor : '#8c92a0'}
             />
             <Text
               className={`text-xs font-sans-semibold ${
@@ -316,7 +316,7 @@ const TopicAiMessageItem: React.FC<{
             height: 420,
             borderRadius: 16,
             overflow: 'hidden',
-            backgroundColor: '#010101',
+            backgroundColor: '#08090b',
           }}
         >
           <KnowledgeMap
@@ -354,7 +354,7 @@ const TopicAiMessageItem: React.FC<{
           {hasSections ? (
             <View className="gap-2.5">
               {plainText.length > 0 && (
-                <View className="bg-[#0e1416] border border-white/10 rounded-2xl p-4">
+                <View className="bg-[#1a1c20] border border-white/10 rounded-2xl p-4">
                   <FormattedClinicalText text={plainText} />
                 </View>
               )}
@@ -364,7 +364,7 @@ const TopicAiMessageItem: React.FC<{
                 return (
                   <View
                     key={`topic-sec-${sIdx}`}
-                    className="rounded-2xl overflow-hidden bg-[#0e1416] border"
+                    className="rounded-2xl overflow-hidden bg-[#1a1c20] border"
                     style={{
                       borderColor: `${themeColor}35`,
                       shadowColor: "#000",
@@ -398,7 +398,7 @@ const TopicAiMessageItem: React.FC<{
             </View>
           ) : (
             <View
-              className="rounded-2xl overflow-hidden bg-[#0e1416] border"
+              className="rounded-2xl overflow-hidden bg-[#1a1c20] border"
               style={{
                 borderColor: `${themeColor}30`,
                 shadowColor: "#000",
@@ -429,7 +429,7 @@ const TopicAiMessageItem: React.FC<{
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   className="opacity-70 active:opacity-100"
                 >
-                  <Ionicons name="copy-outline" size={13} color="#94a3b8" />
+                  <Ionicons name="copy-outline" size={13} color="#8c92a0" />
                 </TouchableOpacity>
               </View>
               <View className="p-4">
@@ -450,7 +450,7 @@ const TopicAiMessageItem: React.FC<{
               {item.citations.map((cit) => (
                 <View
                   key={cit.id}
-                  className="bg-[#0e1416] border border-white/10 rounded-xl p-3 mb-2"
+                  className="bg-[#1a1c20] border border-white/10 rounded-xl p-3 mb-2"
                 >
                   <View className="flex-row items-start gap-2">
                     <View className="px-1.5 py-0.5 rounded-full bg-lavender/20 mt-0.5">
@@ -485,7 +485,7 @@ const TopicAiMessageItem: React.FC<{
                     key={`topic-sug-${sIdx}`}
                     onPress={() => onAskAi(sug)}
                     activeOpacity={0.7}
-                    className="flex-row items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-[#0e1416] border border-white/10 active:opacity-60"
+                    className="flex-row items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-[#1a1c20] border border-white/10 active:opacity-60"
                   >
                     <Ionicons name="arrow-forward-circle" size={14} color={themeColor} />
                     <Text className="text-gray-200 text-xs font-sans-medium leading-4 flex-1">
@@ -504,7 +504,7 @@ const TopicAiMessageItem: React.FC<{
               className="flex-row items-center gap-1.5"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="copy-outline" size={12} color="#6b7280" />
+              <Ionicons name="copy-outline" size={12} color="#8c92a0" />
               <Text className="text-gray-500 text-[11px] font-sans-medium">Copy</Text>
             </TouchableOpacity>
           </View>
@@ -579,11 +579,11 @@ export default function TopicChat({
 
   const specialty = SPECIALTY_KNOWLEDGE[specialtyId] || {
     title: "Specialty",
-    color: "#4bc0b8",
+    color: "#877bf4",
     categories: [],
   };
 
-  const themeColor = propThemeColor || specialty.color || "#4bc0b8";
+  const themeColor = propThemeColor || specialty.color || "#877bf4";
 
   // Find topic subtitle & starter prompts
   let topicData: any = null;
@@ -717,9 +717,9 @@ export default function TopicChat({
     if (item.isError) {
       return (
         <View className="mb-4 px-4 w-full">
-          <View className="bg-[#1a0e0e] border border-red-900/40 rounded-2xl p-4">
+          <View className="bg-[#321612] border border-red-900/40 rounded-2xl p-4">
             <View className="flex-row items-center gap-2 mb-1.5">
-              <Ionicons name="alert-circle" size={16} color="#ef4444" />
+              <Ionicons name="alert-circle" size={16} color="#f05c4a" />
               <Text className="text-red-400 text-xs font-sans-bold">Inquiry Failed</Text>
             </View>
             <Text className="text-gray-300 text-xs font-sans leading-5">{item.text}</Text>
@@ -728,7 +728,7 @@ export default function TopicChat({
                 onPress={() => handleTextSend(item.failedQuery)}
                 className="mt-3 flex-row items-center gap-1.5 self-start px-3 py-1.5 rounded-full bg-red-950/40 border border-red-800/40"
               >
-                <Ionicons name="refresh" size={12} color="#fca5a5" />
+                <Ionicons name="refresh" size={12} color="#f3c2ba" />
                 <Text className="text-red-300 text-xs font-sans-semibold">Retry</Text>
               </TouchableOpacity>
             )}
@@ -793,7 +793,7 @@ export default function TopicChat({
                   <TouchableOpacity
                     key={idx}
                     onPress={() => handleTextSend(prompt)}
-                    className="bg-[#0e1416] border border-white/10 p-3.5 rounded-2xl flex-row items-center justify-between active:opacity-70"
+                    className="bg-[#1a1c20] border border-white/10 p-3.5 rounded-2xl flex-row items-center justify-between active:opacity-70"
                   >
                     <Text className="text-gray-200 text-xs font-sans-medium flex-1 mr-2">{prompt}</Text>
                     <Ionicons name="arrow-forward" size={14} color={themeColor} />
@@ -845,7 +845,7 @@ export default function TopicChat({
           }}
         >
           <View
-            className="flex-1 flex-row items-center bg-[#0e1416] border border-white/10 rounded-2xl px-4 py-2.5"
+            className="flex-1 flex-row items-center bg-[#1a1c20] border border-white/10 rounded-2xl px-4 py-2.5"
             style={{
               minHeight: 52,
               shadowColor: "#000",
@@ -859,7 +859,7 @@ export default function TopicChat({
               value={inputText}
               onChangeText={updateComposerText}
               placeholder={`Ask about ${topicName}...`}
-              placeholderTextColor="#6b7280"
+              placeholderTextColor="#6f7580"
               className="flex-1 text-white text-[15px] font-sans py-1 leading-5"
               style={{ minHeight: MIN_INPUT_HEIGHT, maxHeight: MAX_INPUT_HEIGHT }}
               returnKeyType="send"
@@ -883,7 +883,7 @@ export default function TopicChat({
             disabled={!inputText.trim() || isTyping}
             className="w-10 h-10 rounded-xl items-center justify-center active:opacity-75"
             style={{
-              backgroundColor: inputText.trim() && !isTyping ? themeColor : "#1a2228",
+              backgroundColor: inputText.trim() && !isTyping ? themeColor : "#23262b",
               borderWidth: 1,
               borderColor: inputText.trim() && !isTyping ? `${themeColor}60` : "rgba(255, 255, 255, 0.05)",
             }}
@@ -891,7 +891,7 @@ export default function TopicChat({
             <Ionicons
               name="arrow-up"
               size={20}
-              color={inputText.trim() && !isTyping ? "#010101" : "#4b5563"}
+              color={inputText.trim() && !isTyping ? "#08090b" : "#535862"}
             />
           </TouchableOpacity>
         </RNAnimated.View>
@@ -912,7 +912,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#0c1619',
+    backgroundColor: '#1a1c20',
     borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',

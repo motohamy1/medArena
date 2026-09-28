@@ -54,6 +54,7 @@ export const aiService = {
     claims?: unknown[];
     sources?: unknown[];
     limitations?: string[];
+    diagnostics?: { requestId: string; durationMs: number; backendStatus?: string; timing?: unknown };
   }> {
     const normalizedMessage = message.replace(/\bhylobacter\b/gi, 'helicobacter');
     const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening|سلام|اهلا|أهلا)[!.,\s]*$/i.test(message.trim());
@@ -69,36 +70,37 @@ export const aiService = {
 
     // Spec V3 §33: never a generic clinical answer when the evidence backend
     // fails. Each failure state is distinct and honestly labeled (spec §90).
-    const evidenceUnavailable = (sourceType: string, limitation: string): {
+    const requestId = `chat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+    const requestStartedAt = Date.now();
+    const evidenceUnavailable = (sourceType: string, limitation: string, diagnosticId = requestId): {
       reply: string;
       citations: Citation[];
       suggestions: string[];
       sourceType: string;
       limitations: string[];
+      diagnostics: { requestId: string; durationMs: number; backendStatus?: string };
     } => ({
-      reply: 'Evidence retrieval is currently unavailable. I have not generated an unverified clinical answer from model memory. Please retry in a moment.',
+      reply: `${sourceType === 'RETRIEVAL_TIMEOUT' ? 'The chat request timed out before the backend returned.' : sourceType === 'SOURCE_UNAVAILABLE' ? 'The backend responded, but its evidence sources are unavailable.' : 'The app could not complete the request with its clinical backend.'} No unverified answer was generated. Please retry. [${limitation}; request ${diagnosticId}]`,
       citations: [],
       suggestions: [],
       sourceType,
       limitations: [limitation],
+      diagnostics: { requestId: diagnosticId, durationMs: Date.now() - requestStartedAt, backendStatus: sourceType },
     });
 
     if (!USE_BACKEND || !BACKEND_URL) {
       return evidenceUnavailable('SYSTEM_FAILURE', 'backend_not_configured');
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
-      const controller = new AbortController();
-      // Backend performs multi-source evidence retrieval and may cold-start
-      // (Render free tier); 10s aborted healthy requests mid-retrieval.
-      const timeoutId = setTimeout(() => controller.abort(), 45000);
       const response = await fetch(`${BACKEND_URL}/api/chat/v2`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId },
         body: JSON.stringify({ message: normalizedMessage, mode, category, topicId, categoryContext, history }),
         signal: controller.signal,
       });
-      clearTimeout(timeoutId);
 
       // Spec V3 §93: validate the response shape — never assume answer exists.
       let data: any;
@@ -111,6 +113,7 @@ export const aiService = {
       if (!response.ok) {
         // Spec V3 §38: backend structured errors carry {error:{code,message,retryable}}.
         const code = String(data?.error?.code || '');
+        const diagnosticId = String(data?.request_id || response.headers.get('x-request-id') || requestId);
         if (code === 'QUERY_PARSE_ERROR') {
           return {
             reply: 'I could not interpret that as a clinical question. Could you rephrase it?',
@@ -118,19 +121,51 @@ export const aiService = {
             suggestions: [],
             sourceType: 'CLARIFICATION_REQUIRED',
             limitations: ['query_parse_error'],
+            diagnostics: { requestId: diagnosticId, durationMs: Date.now() - requestStartedAt, backendStatus: code },
           };
         }
-        return evidenceUnavailable(code === 'SOURCE_UNAVAILABLE' ? 'SOURCE_UNAVAILABLE' : 'SYSTEM_FAILURE', code ? `backend_error_${code}` : 'backend_http_error');
+        const failureType = code === 'SOURCE_UNAVAILABLE' || code === 'RETRIEVAL_TIMEOUT' ? code : 'SYSTEM_FAILURE';
+        return evidenceUnavailable(failureType, code ? `http_${response.status}_${code}` : `http_${response.status}`, diagnosticId);
       }
 
       const status = data.evidence?.status;
+      const diagnosticId = String(data.request_id || response.headers.get('x-request-id') || requestId);
       if (!data.answer?.text) {
-        return evidenceUnavailable('SYSTEM_FAILURE', 'missing_answer_text');
+        return evidenceUnavailable('SYSTEM_FAILURE', 'missing_answer_text', diagnosticId);
       }
-      const answer = data.answer.text;
+      const validStatuses = new Set(['VERIFIED', 'PARTIAL', 'CONFLICTING', 'OUTDATED', 'NO_EVIDENCE', 'NO_RELEVANT_EVIDENCE', 'SOURCE_UNAVAILABLE', 'RETRIEVAL_TIMEOUT', 'SYSTEM_FAILURE', 'CLARIFICATION_REQUIRED']);
+      if (!validStatuses.has(status)) return evidenceUnavailable('SYSTEM_FAILURE', 'invalid_evidence_status', diagnosticId);
+      const statusAllowsSources = ['VERIFIED', 'PARTIAL', 'CONFLICTING', 'OUTDATED'].includes(status);
+      const responseSources = statusAllowsSources && Array.isArray(data.sources) ? data.sources : [];
+      if (['VERIFIED', 'PARTIAL', 'CONFLICTING'].includes(status) && responseSources.length === 0) {
+        return evidenceUnavailable('SYSTEM_FAILURE', 'answer_status_without_sources', diagnosticId);
+      }
+      const diagnosticStatuses = ['NO_EVIDENCE', 'NO_RELEVANT_EVIDENCE', 'SOURCE_UNAVAILABLE', 'RETRIEVAL_TIMEOUT', 'SYSTEM_FAILURE'];
+      const stageSummary = Array.isArray(data.timing?.stages)
+        ? data.timing.stages.map((stage: any) => `${stage.stage}:${stage.duration_ms}ms`).join(',')
+        : '';
+      const backendDiagnostics = data.diagnostics || {};
+      const sourceSummary = Array.isArray(backendDiagnostics.retrieval?.sources)
+        ? backendDiagnostics.retrieval.sources.map((source: any) => `${source.source_id}:${source.status}${source.error_type ? `/${source.error_type}` : ''}`).join(',')
+        : '';
+      const normalizationSummary = backendDiagnostics.query_normalization
+        ? `${backendDiagnostics.query_normalization.source || 'unknown'}/${backendDiagnostics.query_normalization.translation_status || 'n/a'}`
+        : '';
+      const verificationSummary = backendDiagnostics.claim_verification?.semantic_verification || '';
+      const detailSummary = [
+        stageSummary && `stages=${stageSummary}`,
+        sourceSummary && `sources=${sourceSummary}`,
+        normalizationSummary && `query=${normalizationSummary}`,
+        verificationSummary && `claim_check=${verificationSummary}`,
+        backendDiagnostics.retrieval?.rejected_candidate_count != null && `rejected=${backendDiagnostics.retrieval.rejected_candidate_count}`,
+        backendDiagnostics.failure_code && `failure=${backendDiagnostics.failure_code}`,
+      ].filter(Boolean).join('; ');
+      const answer = diagnosticStatuses.includes(status)
+        ? `${data.answer.text} [${status}; ${data.timing?.total_ms ?? 'unknown'}ms${detailSummary ? `; ${detailSummary}` : ''}; request ${diagnosticId}]`
+        : data.answer.text;
       return {
         reply: answer,
-        citations: (data.sources || []).map((source: any) => ({
+        citations: responseSources.map((source: any) => ({
           id: source.id,
           title: source.title,
           author: source.organization || '',
@@ -141,9 +176,10 @@ export const aiService = {
         suggestions: [],
         sourceType: status || 'SYSTEM_FAILURE',
         evidence: data.evidence,
-        claims: data.claims,
-        sources: data.sources,
+        claims: statusAllowsSources ? data.claims : [],
+        sources: responseSources,
         limitations: data.limitations,
+        diagnostics: { ...backendDiagnostics, requestId: diagnosticId, durationMs: Date.now() - requestStartedAt, backendStatus: status, timing: data.timing },
       } as any;
     } catch (error: any) {
       // Spec V3 §93/§95: failures are reported honestly, never substituted
@@ -151,9 +187,12 @@ export const aiService = {
       // absence — it is retryable.
       const isAbort = error?.name === 'AbortError' || /abort/i.test(String(error?.message || ''));
       if (isAbort) {
-        return evidenceUnavailable('RETRIEVAL_TIMEOUT', 'client_timeout');
+        return evidenceUnavailable('RETRIEVAL_TIMEOUT', 'client_timeout', requestId);
       }
-      return evidenceUnavailable('SYSTEM_FAILURE', 'backend_unreachable');
+      const networkFailure = error?.name === 'TypeError' || /network|fetch failed/i.test(String(error?.message || ''));
+      return evidenceUnavailable('SYSTEM_FAILURE', networkFailure ? 'network_or_dns_unreachable' : 'backend_unreachable', requestId);
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
 

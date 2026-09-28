@@ -35,7 +35,7 @@ const SectionBlock: React.FC<{ section: Section; onCopy?: (id: string) => void; 
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
-        <View style={[styles.chip, { backgroundColor: section.colorToken || '#6ec2be' }]} />
+        <View style={[styles.chip, { backgroundColor: section.colorToken || '#877bf4' }]} />
         <Text style={styles.title}>{section.title || section.type}</Text>
         <View style={{ flex: 1 }} />
         <TouchableOpacity onPress={() => onCopy?.(section.id)}>
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     padding: 16,
-    backgroundColor: '#161718',
+    backgroundColor: '#23262b',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.04)'
   },

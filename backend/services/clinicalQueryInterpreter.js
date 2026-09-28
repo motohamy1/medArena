@@ -51,6 +51,18 @@ const EGYPTIAN_TERMS = Object.freeze({
 // Multi-word / phrase-level canonical concepts matched on the normalized text
 // before tokenization (token-level matching would split them).
 const PHRASE_CONCEPTS = Object.freeze([
+    { pattern: /\bacute pancreatitis\b|التهاب البنكرياس الحاد/, concept: 'acute pancreatitis', type: 'condition' },
+    { pattern: /\bchronic pancreatitis\b|التهاب البنكرياس المزمن/, concept: 'chronic pancreatitis', type: 'condition' },
+    { pattern: /\bpancreatitis\b|التهاب البنكرياس(?!\s+الحاد|\s+المزمن)/, concept: 'pancreatitis', type: 'condition' },
+    { pattern: /\bautoimmune hepatitis\b|التهاب الكبد المناعي(?: الذاتي)?/, concept: 'autoimmune hepatitis', type: 'condition' },
+    { pattern: /\bheart failure\b|\bcongestive heart failure\b|فشل القلب|قصور القلب/, concept: 'heart failure', type: 'condition' },
+    { pattern: /\banaphylaxis\b|التأق|الحساسية المفرطة/, concept: 'anaphylaxis', type: 'condition' },
+    { pattern: /\biron deficiency anemia\b|\biron-deficiency anaemia\b|أنيميا نقص الحديد|انيميا نقص الحديد|فقر الدم بعوز الحديد/, concept: 'iron deficiency anemia', type: 'condition' },
+    { pattern: /\bacute diverticulitis\b|التهاب الرتوج الحاد|التهاب الرتج الحاد/, concept: 'acute diverticulitis', type: 'condition' },
+    { pattern: /\bdiverticulitis\b|التهاب الرتوج|التهاب الرتج/, concept: 'diverticulitis', type: 'condition' },
+    { pattern: /\bsinusitis\b|\bsinus infection\b|التهاب الجيوب الأنفية/, concept: 'sinusitis', type: 'condition' },
+    { pattern: /\bgastritis\b|التهاب المعدة/, concept: 'gastritis', type: 'condition' },
+    { pattern: /\bcommunity acquired pneumonia\b|\bcommunity-acquired pneumonia\b|ذات الرئة المكتسبة من المجتمع/, concept: 'community acquired pneumonia', type: 'condition' },
     { pattern: /\bacute cholangitis\b|cholangitis|تليف مراري/, concept: 'acute cholangitis', type: 'condition' },
     { pattern: /\bcholecystitis\b|التهاب المرارة|التهاب في جدار المرارة/, concept: 'cholecystitis', type: 'condition' },
     { pattern: /\bpeptic ulcer\b|\bgi ulcer\b|قرحة المعدة|قرحة الاثني عشر/, concept: 'peptic ulcer', type: 'condition' },
@@ -365,6 +377,42 @@ function classifyComplexity({ entityCount, comparison, hasModifiers, isDosing, a
     return 'SIMPLE';
 }
 
+const CONDITION_MODIFIERS = new Set(['obesity', 'pregnancy', 'renal', 'hepatic']);
+
+function extractPriorClinicalConditions(history = []) {
+    const userTurns = (history || [])
+        .filter((turn) => turn && (turn.isUser === true || turn.role === 'user') && typeof turn.text === 'string' || turn && turn.role === 'user' && typeof turn.content === 'string')
+        .slice(-8)
+        .reverse();
+
+    for (const turn of userTurns) {
+        const priorText = String(turn.text || turn.content || '');
+        const priorNormalized = normalizeText(priorText);
+        const found = [];
+        const add = (concept, metadata = {}) => {
+            if (!found.some((condition) => condition.concept === concept)) found.push({ concept, confidence: 0.85, ...metadata });
+        };
+
+        for (const phrase of PHRASE_CONCEPTS) {
+            if (phrase.type === 'condition' && phrase.pattern.test(priorNormalized)) add(phrase.concept);
+        }
+        for (const [alias, mapping] of Object.entries(EGYPTIAN_TERMS)) {
+            if (mapping.type === 'condition' && priorNormalized.includes(alias)) add(mapping.term);
+        }
+        for (const token of priorNormalized.split(/[^\p{L}\p{N}]+/gu)) {
+            const resolved = ENGLISH_LEXICON[token];
+            if (resolved?.type === 'condition') add(resolved.term);
+        }
+        if (extractBloodPressure(priorNormalized) && !found.some((condition) => condition.concept === 'hypertension')) {
+            add('hypertension', { derived_from: 'stated_blood_pressure' });
+        }
+
+        const primary = found.filter((condition) => !CONDITION_MODIFIERS.has(condition.concept));
+        if (primary.length) return primary;
+    }
+    return [];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main entry point
 // ─────────────────────────────────────────────────────────────────────────────
@@ -390,6 +438,7 @@ function interpretClinicalQuery(message, history = []) {
     // 2. Arabic/Egyptian surface forms (substring match on normalized text)
     const terms = [];
     const pushTerm = (term) => { if (!terms.includes(term)) terms.push(term); };
+    for (const condition of conditions) pushTerm(condition.concept);
     for (const [alias, mapping] of Object.entries(EGYPTIAN_TERMS)) {
         if (normalized.includes(alias)) {
             if (mapping.type !== 'intent') { pushTerm(mapping.term); }
@@ -486,6 +535,16 @@ function interpretClinicalQuery(message, history = []) {
         conditions.push({ concept: 'hypertension', confidence: 0.95 });
     }
 
+    // Follow-up turns inherit the nearest explicitly established disease as
+    // well as demographics. Patient modifiers (obesity/pregnancy/renal status)
+    // are not allowed to replace the disease retrieval anchor.
+    if (isFollowUp && !conditions.some((condition) => !CONDITION_MODIFIERS.has(condition.concept))) {
+        for (const priorCondition of extractPriorClinicalConditions(history)) {
+            if (!conditions.some((condition) => condition.concept === priorCondition.concept)) conditions.push(priorCondition);
+            pushTerm(priorCondition.concept);
+        }
+    }
+
     // 9. Intent & comparison
     let intent = classifyIntent(text, terms, history);
     const comparison = detectComparison(normalized, drugClasses);
@@ -532,7 +591,7 @@ function interpretClinicalQuery(message, history = []) {
         subQuestionCount: conditions.length + (comparison ? 1 : 0) + (hasModifiers ? 1 : 0),
     });
 
-    const conditionName = conditions[0]?.concept || null;
+    const conditionName = conditions.find((condition) => !CONDITION_MODIFIERS.has(condition.concept))?.concept || conditions[0]?.concept || null;
     const normalizedQuery = terms.join(' ') || rawTokens.slice(0, 8).join(' ');
 
     return {
@@ -543,6 +602,7 @@ function interpretClinicalQuery(message, history = []) {
         complexity,
         condition: conditionName,
         conditions,
+        retrieval_anchors: [conditionName || medications[0] || drugClasses[0] || symptoms[0] || labs[0]?.name].filter(Boolean),
         patient: {
             sex,
             age: { value: ageValue, unit: ageValue != null ? 'years' : null, range: ageRange },

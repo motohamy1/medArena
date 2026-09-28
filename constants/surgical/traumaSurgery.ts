@@ -5,7 +5,7 @@ export const TRAUMA_SURGERY_SPECIALTY: SpecialtyData = {
   name: 'Trauma Surgery',
   scientificName: 'Trauma & Acute Care Surgery',
   icon: 'flame',
-  color: '#ffc3dd', // Rose
+  color: '#eb988a', // Rose
   illustration: require('../../assets/images/specialties/infectious.jpg'),
   generalScope: 'Comprehensive acute trauma resuscitation, damage control surgery, massive transfusion protocols, emergency thoracotomy, solid organ injury, and compartment syndromes.',
   categories: [

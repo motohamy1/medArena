@@ -5,7 +5,7 @@ export const NEUROSURGERY_SPECIALTY: SpecialtyData = {
   name: 'Neurosurgery',
   scientificName: 'Neurological & Spine Surgery',
   icon: 'pulse',
-  color: '#defff9', // Mint
+  color: '#f6dda2', // Mint
   illustration: require('../../assets/images/specialties/neurology.jpg'),
   generalScope: 'Comprehensive cranial, cerebrovascular, skull base, spinal instrumentation, neurotrauma, and functional neurosurgical procedures.',
   categories: [

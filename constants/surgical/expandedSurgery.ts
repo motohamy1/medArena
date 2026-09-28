@@ -6,7 +6,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Plastic Surgery',
     scientificName: 'Plastic, Reconstructive & Burn Surgery',
     icon: 'body-outline',
-    color: '#ffc3dd', // Rose
+    color: '#eb988a', // Rose
     illustration: require('../../assets/images/specialties/dermatology.jpg'),
     generalScope: 'Comprehensive reconstructive microsurgery, free flap transfers, burn management, skin grafting, and aesthetic plastic surgery.',
     categories: [
@@ -59,7 +59,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Pediatric Surgery',
     scientificName: 'Pediatric & Neonatal Surgery',
     icon: 'people-outline',
-    color: '#defff9', // Mint
+    color: '#f6dda2', // Mint
     illustration: require('../../assets/images/specialties/gastroenterology.jpg'),
     generalScope: 'Comprehensive neonatal congenital anomaly repairs, pediatric general surgery, and pediatric surgical emergencies.',
     categories: [
@@ -112,7 +112,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'ENT / Head & Neck',
     scientificName: 'Otolaryngology & Head/Neck Surgery',
     icon: 'headset-outline',
-    color: '#6dc2bd', // Teal
+    color: '#877bf4', // Teal
     illustration: require('../../assets/images/specialties/pulmonology.jpg'),
     generalScope: 'Comprehensive endocrine neck surgery, surgical airway management, endoscopic sinus surgery, and head and neck oncology.',
     categories: [
@@ -165,7 +165,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Surgical Oncology',
     scientificName: 'Complex General Surgical Oncology',
     icon: 'shield-outline',
-    color: '#dbd4fd', // Lavender
+    color: '#b0afeb', // Lavender
     illustration: require('../../assets/images/specialties/gastroenterology.jpg'),
     generalScope: 'Comprehensive complex multivisceral oncologic resections, cytoreductive surgery, HIPEC, and retroperitoneal sarcomas.',
     categories: [
@@ -218,7 +218,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Transplant Surgery',
     scientificName: 'Abdominal & Thoracic Organ Transplantation',
     icon: 'repeat-outline',
-    color: '#defff9', // Mint
+    color: '#f6dda2', // Mint
     illustration: require('../../assets/images/specialties/nephrology.jpg'),
     generalScope: 'Comprehensive deceased and living donor kidney, liver, and pancreas organ transplantation and immunosuppression protocols.',
     categories: [
@@ -271,7 +271,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Bariatric',
     scientificName: 'Bariatric & Metabolic Surgery',
     icon: 'resize-outline',
-    color: '#ffc3dd', // Rose
+    color: '#eb988a', // Rose
     illustration: require('../../assets/images/specialties/gastroenterology.jpg'),
     generalScope: 'Laparoscopic sleeve gastrectomy, Roux-en-Y gastric bypass, revision bariatric surgery, and metabolic syndrome resolution.',
     categories: [
@@ -357,7 +357,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Hepatobiliary',
     scientificName: 'Hepatobiliary & Pancreatic Surgery',
     icon: 'flask-outline',
-    color: '#6dc2bd', // Teal
+    color: '#877bf4', // Teal
     illustration: require('../../assets/images/specialties/gastroenterology.jpg'),
     generalScope: 'Complex liver resections, classic Whipple pancreaticoduodenectomy, biliary stricture reconstruction, and liver trauma.',
     categories: [
@@ -443,7 +443,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Maxillofacial',
     scientificName: 'Oral & Maxillofacial Surgery',
     icon: 'happy-outline',
-    color: '#dbd4fd', // Lavender
+    color: '#b0afeb', // Lavender
     illustration: require('../../assets/images/specialties/psychiatry.jpg'),
     generalScope: 'Complex orthognathic surgery, facial trauma reconstruction, TMJ arthroplasty, and craniofacial anomalies.',
     categories: [
@@ -529,7 +529,7 @@ export const EXPANDED_SURGICAL_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Endocrine Surgery',
     scientificName: 'Endocrine & Thyroid Surgery',
     icon: 'nuclear-outline',
-    color: '#defff9', // Mint
+    color: '#f6dda2', // Mint
     illustration: require('../../assets/images/specialties/endocrinology.jpg'),
     generalScope: 'Targeted parathyroidectomy, retroperitoneal laparoscopic adrenalectomy, thyroid surgery, and MEN syndrome management.',
     categories: [

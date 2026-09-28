@@ -41,7 +41,51 @@ function normalizeHistory(history = []) {
     }).filter(Boolean);
 }
 
-async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
+function timeoutError(timeoutMs) {
+    const error = new Error(`AI provider deadline exceeded (${timeoutMs}ms)`);
+    error.code = 'AI_TIMEOUT';
+    return error;
+}
+
+function remainingTime(deadline) {
+    return Math.max(0, deadline - Date.now());
+}
+
+async function withProviderTimeout(operation, deadline, label) {
+    const timeoutMs = remainingTime(deadline);
+    if (timeoutMs <= 0) throw timeoutError(0);
+
+    const controller = new AbortController();
+    let timer;
+    const aborted = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+            controller.abort();
+            reject(timeoutError(timeoutMs));
+        }, timeoutMs);
+    });
+    try {
+        return await Promise.race([Promise.resolve().then(() => operation(controller.signal, timeoutMs)), aborted]);
+    } catch (error) {
+        if (controller.signal.aborted || error?.name === 'AbortError') throw timeoutError(timeoutMs);
+        if (label) error.provider = label;
+        throw error;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function fetchJsonWithDeadline(url, options, deadline, label) {
+    return withProviderTimeout(async (signal) => {
+        const response = await fetch(url, { ...options, signal });
+        const data = await response.json().catch(() => null);
+        return { response, data };
+    }, deadline, label);
+}
+
+async function executeAI(systemPrompt, userPrompt, rawHistory = [], options = {}) {
+    const timeoutMs = Math.max(500, Number(options.timeoutMs) || 12000);
+    const deadline = Date.now() + timeoutMs;
+    const maxOutputTokens = Math.max(64, Number(options.maxOutputTokens) || 4096);
     let lastError = null;
     const history = normalizeHistory(rawHistory).slice(-8); // Keep last 8 turns for high relevance
 
@@ -66,8 +110,9 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
         ];
 
         for (const modelName of groqModels) {
+            if (remainingTime(deadline) <= 0) break;
             try {
-                const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                const { response, data } = await fetchJsonWithDeadline("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${GROQ_API_KEY}`,
@@ -77,12 +122,11 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
                         model: modelName,
                         messages: groqMessages,
                         temperature: 0.1,
-                        max_tokens: 4096
+                        max_tokens: maxOutputTokens
                     })
-                });
+                }, deadline, `groq:${modelName}`);
 
                 if (response.ok) {
-                    const data = await response.json();
                     if (data.choices && data.choices[0] && data.choices[0].message) {
                         const content = cleanText(data.choices[0].message.content);
                         if (content && content.length > 0) {
@@ -91,6 +135,7 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
                     }
                 }
             } catch (groqErr) {
+                lastError = groqErr;
                 console.warn(`[AI Router] Groq ${modelName} error:`, groqErr.message);
             }
         }
@@ -100,13 +145,18 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
     if (genAI) {
         const geminiModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
         for (const geminiModelName of geminiModels) {
+            if (remainingTime(deadline) <= 0) break;
             try {
                 const modelInstance = genAI.getGenerativeModel({
                     model: geminiModelName,
-                    generationConfig: { maxOutputTokens: 4096 }
+                    generationConfig: { maxOutputTokens }
                 });
                 const fullPrompt = `${systemPrompt}\n\n${historyTextSnippet}`;
-                const result = await modelInstance.generateContent(fullPrompt);
+                const result = await withProviderTimeout(
+                    (_signal, requestTimeoutMs) => modelInstance.generateContent(fullPrompt, { timeout: requestTimeoutMs }),
+                    deadline,
+                    `gemini:${geminiModelName}`,
+                );
                 const text = result.response.text();
                 if (text) return cleanText(text);
             } catch (err) {
@@ -117,7 +167,7 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
     }
 
     // 3. Fallback to Nvidia NIM
-    if (NVIDIA_API_KEY) {
+    if (NVIDIA_API_KEY && remainingTime(deadline) > 0) {
         try {
             const nvidiaMessages = [
                 { role: "system", content: systemPrompt },
@@ -125,7 +175,7 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
                 { role: "user", content: userPrompt }
             ];
 
-            const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+            const { response, data } = await fetchJsonWithDeadline("https://integrate.api.nvidia.com/v1/chat/completions", {
                 method: "POST",
                 headers: { 
                     "Authorization": `Bearer ${NVIDIA_API_KEY}`, 
@@ -134,24 +184,24 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
                 body: JSON.stringify({ 
                     model: "meta/llama-3.1-70b-instruct", 
                     messages: nvidiaMessages,
-                    max_tokens: 4096,
+                    max_tokens: maxOutputTokens,
                     temperature: 0.1
                 })
-            });
+            }, deadline, 'nvidia');
 
             if (response.ok) {
-                const data = await response.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
                     return cleanText(data.choices[0].message.content);
                 }
             }
         } catch (fetchErr) {
+            lastError = fetchErr;
             console.error("[AI Router] Nvidia Fetch Error:", fetchErr.message);
         }
     }
 
     // 4. Fallback to OpenRouter
-    if (OPENROUTER_API_KEY) {
+    if (OPENROUTER_API_KEY && remainingTime(deadline) > 0) {
         try {
             const openRouterMessages = [
                 { role: "system", content: systemPrompt },
@@ -159,7 +209,7 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
                 { role: "user", content: userPrompt }
             ];
 
-            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            const { response, data } = await fetchJsonWithDeadline("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: { 
                     "Authorization": `Bearer ${OPENROUTER_API_KEY}`, 
@@ -168,17 +218,17 @@ async function executeAI(systemPrompt, userPrompt, rawHistory = []) {
                 body: JSON.stringify({ 
                     model: "openrouter/free", 
                     messages: openRouterMessages,
-                    max_tokens: 4096
+                    max_tokens: maxOutputTokens
                 })
-            });
+            }, deadline, 'openrouter');
 
             if (response.ok) {
-                const data = await response.json();
                 if (data.choices && data.choices[0] && data.choices[0].message) {
                     return cleanText(data.choices[0].message.content);
                 }
             }
         } catch (fetchErr) {
+            lastError = fetchErr;
             console.error("[AI Router] OpenRouter Fetch Error:", fetchErr.message);
         }
     }
@@ -321,8 +371,8 @@ Output ONLY ONE WORD: either CONVERSATIONAL or CLINICAL.`;
     }
 }
 
-async function callAI(systemPrompt, userPrompt = '', history = []) {
-    return executeAI(systemPrompt, userPrompt, history);
+async function callAI(systemPrompt, userPrompt = '', history = [], options = {}) {
+    return executeAI(systemPrompt, userPrompt, history, options);
 }
 
 module.exports = {
@@ -330,4 +380,5 @@ module.exports = {
     callAI,
     extractEnglishKeywords,
     analyzeIntent,
+    withProviderTimeout,
 };

@@ -9,9 +9,13 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "check:colors": "node scripts/check-colors.js"
+    "check:colors": "node scripts/check-colors.js",
+    "check:theme": "node scripts/verify-theme.js",
+    "check:all": "node scripts/verify-all.cjs && npx tsc --noEmit",
+    "check:text": "node scripts/verify-all.cjs"
   },
   "dependencies": {
+    "@expo-google-fonts/anton": "^0.4.2",
     "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
     "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
@@ -57,8 +61,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
-    "eslint": "^9.25.0",
-    "eslint-config-expo": "57.0.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.2",
     "sharp": "^0.35.4",
     "typescript": "~6.0.3"
   },

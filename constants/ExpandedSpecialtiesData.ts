@@ -47,7 +47,7 @@ export const SURGERY_CATEGORIES: SurgeryCategoryItem[] = [
     subtitle: 'Acute Abdomen, Bowel Ischemia, Trauma & Biliary Emergencies',
     badge: 'SURGICAL CASES',
     icon: 'bandage-outline',
-    color: '#ffc3dd', // Rose
+    color: '#eb988a', // Rose
     description: 'High-yield surgical admissions, triage decision pathways, emergent operative indications, and acute abdominal pain protocols.',
     keyPoints: [
       'Immediate evaluation of peritonitis and peritoneal signs (rebound, involuntary guarding, rigidity)',
@@ -87,7 +87,7 @@ export const SURGERY_CATEGORIES: SurgeryCategoryItem[] = [
     subtitle: 'Stepwise Dissection, Critical Safety Views & Anastomoses',
     badge: 'OPERATIVE STEPS',
     icon: 'cut-outline',
-    color: '#defff9', // Luminous Mint
+    color: '#f6dda2', // Luminous Mint
     description: 'Precise chronological surgical dissection stages, anatomical landmark identification, critical views of safety, and closure techniques.',
     keyPoints: [
       'Patient positioning, skin prep (ChloraPrep 2%), and surgical timeout',
@@ -127,7 +127,7 @@ export const SURGERY_CATEGORIES: SurgeryCategoryItem[] = [
     subtitle: 'Scalpels, Energy Platforms, Retractors, Staplers & Sutures',
     badge: 'INSTRUMENTS & ENERGY',
     icon: 'hardware-chip-outline',
-    color: '#6dc2bd', // Jewel Teal
+    color: '#877bf4', // Jewel Teal
     description: 'Operating room instrument inventory, scalpel blade mechanics, advanced bipolar & ultrasonic energy platforms, retractor sets, and suture selection.',
     keyPoints: [
       'Scalpel selection: #10 (large skin incisions), #11 (stab incisions/drainage), #15 (delicate precision incisions)',
@@ -167,7 +167,7 @@ export const SURGERY_CATEGORIES: SurgeryCategoryItem[] = [
     subtitle: 'Enhanced Recovery, Drain Management, Post-Op Fever & SSI',
     badge: 'POST-OP & ERAS',
     icon: 'pulse-outline',
-    color: '#dbd4fd', // Lavender
+    color: '#b0afeb', // Lavender
     description: 'Enhanced Recovery After Surgery (ERAS) pathways, fluid balance, surgical drain output algorithms, post-op fever differential, and wound complications.',
     keyPoints: [
       'ERAS Protocols: Early multimodal non-opioid analgesia, early feeding within 24h, zero-balance IV fluids, and day 0 mobilization',
@@ -202,7 +202,7 @@ export const SURGERY_CATEGORIES: SurgeryCategoryItem[] = [
     subtitle: 'ASA Staging, Cardiac RCRI, Airway Mallampati & Anticoagulation Bridging',
     badge: 'PRE-OP RISK',
     icon: 'shield-checkmark-outline',
-    color: '#ffc3dd', // Rose
+    color: '#eb988a', // Rose
     description: 'Systematic preoperative risk stratification, revised cardiac risk index (RCRI), pulmonary risk (ARISCAT), difficult airway screening, and anticoagulant interruption.',
     keyPoints: [
       'ASA Physical Status (I to VI and Emergent E designation)',
@@ -231,7 +231,7 @@ export const SURGERY_CATEGORIES: SurgeryCategoryItem[] = [
     subtitle: 'Lethal Triad, Trauma Laparotomy, FAST & Massive Transfusion',
     badge: 'DAMAGE CONTROL',
     icon: 'flame-outline',
-    color: '#6dc2bd', // Jewel Teal
+    color: '#877bf4', // Jewel Teal
     description: 'Resuscitation in catastrophic hemorrhage, abrogation of the "Lethal Triad" (Hypothermia, Acidosis, Coagulopathy), and rapid abbreviated operative staging.',
     keyPoints: [
       'Damage Control Surgery Principle: Abbreviated initial laparotomy (<60-90 mins) to control hemorrhage and contamination, followed by ICU resuscitation and definitive second-look repair',
@@ -267,7 +267,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Nephrology & Renal Medicine',
     badge: 'NEPHROLOGY',
     icon: 'water-outline',
-    color: '#defff9', // Mint
+    color: '#f6dda2', // Mint
     scope: 'Acute kidney injury staging, dialysis indications, glomerular diseases, fluid/electrolyte management, and resistant hypertension.',
     corePillars: ['KDIGO AKI Staging', 'Urgent Dialysis "AEIOU"', 'Acid-Base & Potassium Emergencies', 'Nephrotic vs Nephritic Syndromes'],
     highYieldTopics: [
@@ -296,7 +296,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Endocrinology & Metabolism',
     badge: 'ENDOCRINOLOGY',
     icon: 'speedometer-outline',
-    color: '#ffc3dd', // Rose
+    color: '#eb988a', // Rose
     scope: 'Diabetic emergencies, thyroid crisis, adrenal insufficiency, pituitary disorders, and inpatient glycemic control algorithms.',
     corePillars: ['DKA & HHS Protocols', 'Thyroid Storm (Burch-Wartofsky)', 'Adrenal Crisis & Stress Dosing', 'Hypercalcemia & Parathyroid Crisis'],
     highYieldTopics: [
@@ -325,7 +325,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Emergency & Critical Care Medicine',
     badge: 'CRITICAL CARE',
     icon: 'medkit-outline',
-    color: '#6dc2bd', // Jewel Teal
+    color: '#877bf4', // Jewel Teal
     scope: 'Undifferentiated shock, mechanical ventilation protocols, rapid sequence intubation, hemodynamic monitoring, and ICU sedation/paralysis.',
     corePillars: ['RUSH Shock Ultrasound Protocol', 'RSI Airway & Hemodynamic Optimization', 'ARDS Lung-Protective Ventilation', 'Vasoactive Agent Titration Matrix'],
     highYieldTopics: [
@@ -354,7 +354,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Hematology & Medical Oncology',
     badge: 'HEME / ONC',
     icon: 'fitness-outline',
-    color: '#dbd4fd', // Lavender
+    color: '#b0afeb', // Lavender
     scope: 'Febrile neutropenia, oncologic emergencies, sickle cell vaso-occlusive crisis, coagulation disorders, and transfusion medicine.',
     corePillars: ['Febrile Neutropenia MASCC Score', 'Tumor Lysis Syndrome (Cairo-Bishop)', 'Heparin-Induced Thrombocytopenia (4Ts)', 'Anticoagulant Reversal Agents'],
     highYieldTopics: [
@@ -383,7 +383,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Rheumatology & Autoimmune Diseases',
     badge: 'RHEUMATOLOGY',
     icon: 'body-outline',
-    color: '#ffc3dd', // Rose
+    color: '#eb988a', // Rose
     scope: 'Autoimmune connective tissue diseases, inflammatory arthritis, vasculitis syndromes, lupus flares, and biologic DMARD safety protocols.',
     corePillars: ['Lupus Nephritis & SLE Flares', 'Giant Cell Arteritis & PMR', 'Acute Monoarthritis (Gout vs Septic)', 'ANCA-Associated Vasculitis'],
     highYieldTopics: [
@@ -407,7 +407,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Pediatrics & Neonatal Medicine',
     badge: 'PEDIATRICS',
     icon: 'happy-outline',
-    color: '#defff9', // Mint
+    color: '#f6dda2', // Mint
     scope: 'Pediatric emergency resuscitation, weight-based calculations, pediatric infectious diseases, respiratory distress, and neonatology milestones.',
     corePillars: ['PALS Resuscitation & Broselow', 'Pediatric Fluid & Electrolyte Dosing', 'Febrile Infant Protocol (<60 days)', 'Croup (Westley) vs Epiglottitis'],
     highYieldTopics: [
@@ -436,7 +436,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Psychiatry & Behavioral Health',
     badge: 'PSYCHIATRY',
     icon: 'sparkles-outline',
-    color: '#6dc2bd', // Jewel Teal
+    color: '#877bf4', // Jewel Teal
     scope: 'Acute psych emergency triage, rapid chemical tranquilization, serotonin syndrome, neuroleptic malignant syndrome, and alcohol withdrawal protocols.',
     corePillars: ['Agitation Protocol (BETA Consensus)', 'Serotonin Syndrome (Hunter Criteria)', 'NMS vs Serotonin Syndrome', 'CIWA-Ar Alcohol Withdrawal'],
     highYieldTopics: [
@@ -465,7 +465,7 @@ export const EXPANDED_MEDICINE_SPECIALTIES: MedicineSpecialtyItem[] = [
     scientificName: 'Ophthalmology & Visual Sciences',
     badge: 'OPHTHALMOLOGY',
     icon: 'eye-outline',
-    color: '#dbd4fd', // Lavender
+    color: '#b0afeb', // Lavender
     scope: 'Acute vision loss, ocular emergencies, glaucoma crises, retinal detachment, chemical burns, and orbital pathology.',
     corePillars: ['Acute Angle-Closure Glaucoma', 'Central Retinal Artery Occlusion', 'Chemical Eye Burns (Roper-Hall)', 'Orbital Compartment Syndrome'],
     highYieldTopics: [

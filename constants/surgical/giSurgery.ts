@@ -5,7 +5,7 @@ export const GI_SURGERY_SPECIALTY: SpecialtyData = {
   name: 'GI Surgery',
   scientificName: 'Gastrointestinal & General Surgery',
   icon: 'cut',
-  color: '#ffc3dd', // Rose
+  color: '#eb988a', // Rose
   illustration: require('../../assets/images/specialties/gastroenterology.jpg'),
   generalScope: 'Comprehensive gastrointestinal and abdominal surgery covering foregut, hepatobiliary, pancreatic, colorectal, abdominal wall, bariatric, and emergency general surgery.',
   categories: [

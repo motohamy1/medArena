@@ -60,11 +60,11 @@ export const MoreMedicineModal: React.FC<MoreMedicineModalProps> = ({
             {/* Header */}
             <View className="flex-row items-center justify-between pb-3.5 border-b border-white/10">
               <View className="flex-row items-center gap-2.5">
-                <View className="w-10 h-10 rounded-2xl bg-[#4bc0b8]20 border border-[#4bc0b8]40 items-center justify-center">
-                  <Ionicons name="medical" size={20} color="#4bc0b8" />
+                <View className="w-10 h-10 rounded-2xl bg-[#877bf4]20 border border-[#877bf4]40 items-center justify-center">
+                  <Ionicons name="medical" size={20} color="#877bf4" />
                 </View>
                 <View>
-                  <Text className="text-[10px] font-mono text-[#4bc0b8] font-bold uppercase tracking-wider">
+                  <Text className="text-[10px] font-mono text-[#877bf4] font-bold uppercase tracking-wider">
                     Expanded Clinical Disciplines
                   </Text>
                   <Text className="text-[17px] font-sans-bold text-white leading-tight">
@@ -106,7 +106,7 @@ export const MoreMedicineModal: React.FC<MoreMedicineModalProps> = ({
                     ]}
                   >
                     <LinearGradient
-                      colors={[`${spec.color}15`, `${spec.color}04`, '#080c0e']}
+                      colors={[`${spec.color}15`, `${spec.color}04`, '#1a1c20']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.cardGradient}
@@ -297,7 +297,7 @@ export const MoreMedicineModal: React.FC<MoreMedicineModalProps> = ({
                     {selectedSpecialty.highYieldTopics.map((top, i) => (
                       <View
                         key={i}
-                        className="p-3 rounded-xl bg-[#090d0f] border border-white/10"
+                        className="p-3 rounded-xl bg-[#1a1c20] border border-white/10"
                       >
                         <Text className="text-[13px] font-sans-bold text-white mb-1">
                           {top.title}
@@ -339,8 +339,8 @@ export const MoreMedicineModal: React.FC<MoreMedicineModalProps> = ({
                       elevation: 6,
                     }}
                   >
-                    <Ionicons name="chatbubbles" size={16} color="#010101" />
-                    <Text className="text-[#010101] font-sans-bold text-[13px]">
+                    <Ionicons name="chatbubbles" size={16} color="#08090b" />
+                    <Text className="text-[#08090b] font-sans-bold text-[13px]">
                       Consult Specialist AI ({selectedSpecialty.name})
                     </Text>
                   </TouchableOpacity>
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
-    backgroundColor: '#080c0d',
+    backgroundColor: '#1a1c20',
   },
   cardGradient: {
     padding: 13,
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#080c0e',
+    backgroundColor: '#1a1c20',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,

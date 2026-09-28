@@ -1,3 +1,4 @@
+import { Anton_400Regular } from "@expo-google-fonts/anton";
 import {
   IBMPlexSans_400Regular,
   IBMPlexSans_500Medium,
@@ -37,8 +38,8 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, backgroundColor: "#010101", justifyContent: "center", alignItems: "center", padding: 24 }}>
-          <Text style={{ color: "#f9bac9", fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
+        <View style={{ flex: 1, backgroundColor: "#08090b", justifyContent: "center", alignItems: "center", padding: 24 }}>
+          <Text style={{ color: "#eb988a", fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
             Medical Arena
           </Text>
           <Text style={{ color: "#999", fontSize: 14, textAlign: "center" }}>
@@ -56,6 +57,7 @@ class ErrorBoundary extends React.Component<
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
+    Anton_400Regular,
     PlexSans_400Regular: IBMPlexSans_400Regular,
     PlexSans_500Medium: IBMPlexSans_500Medium,
     PlexSans_600SemiBold: IBMPlexSans_600SemiBold,
@@ -83,12 +85,12 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#010101" }}>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#08090b" }}>
         <SafeAreaProvider>
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: "#010101" },
+              contentStyle: { backgroundColor: "#08090b" },
               animation: "fade",
             }}
           />

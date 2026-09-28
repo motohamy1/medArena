@@ -89,3 +89,19 @@ test('utilities', () => {
     assert.equal(levenshtein('diurctic', 'diuretic'), 1);
     assert.equal(levenshtein('dthiazide', 'thiazide'), 1);
 });
+
+test('primary disease outranks obesity and pregnancy modifiers', () => {
+    const query = interpretClinicalQuery('female obese in her 50s with hypertension, best outpatient treatment?', []);
+    assert.equal(query.condition, 'hypertension');
+});
+
+test('Arabic acute pancreatitis is resolved as a canonical disease', () => {
+    const query = interpretClinicalQuery('ماهي معايير تشخيص التهاب البنكرياس الحاد؟', []);
+    assert.equal(query.condition, 'acute pancreatitis');
+    assert.ok(query.search_terms.includes('acute pancreatitis'));
+});
+
+test('comparison follow-up keeps the established disease as its retrieval anchor', () => {
+    const query = interpretClinicalQuery('طب هل CCB أحسن ولا thiazide like diuretic في حالة الـobese؟', CASE_A_HISTORY);
+    assert.equal(query.condition, 'hypertension');
+});

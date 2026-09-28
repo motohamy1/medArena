@@ -222,7 +222,7 @@ const MenuSection = ({
   <View className="flex-col gap-2 px-4 py-2">
     {icon ? (
       <View className="flex-row items-center gap-2 px-2 py-2">
-        <Ionicons name={icon} size={20} color="#6ec2be" />
+        <Ionicons name={icon} size={20} color="#877bf4" />
         <Text className="text-lg font-sans-bold text-white">{title}</Text>
       </View>
     ) : (
@@ -322,7 +322,7 @@ const Profile = () => {
       subtitle: 'Professional, Friendly, Concise',
       icon: 'happy',
       iconColor: Colors.specialty.obgyn,
-      bgColor: 'bg-pink-500/10',
+      bgColor: 'bg-pink/10',
     },
   ];
 

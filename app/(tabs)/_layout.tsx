@@ -119,15 +119,14 @@ function NotchedTabBar({ state, descriptors, navigation }: any) {
           <View style={styles.innerBorder} />
         </View>
 
-        {/* Sliding Active Indicator (The "Liquid" part) - Sized for Icon Only */}
-        <Animated.View style={[styles.activeIndicator, indicatorStyle, { width: 44, height: 44 }]}>
-           <LinearGradient
-            colors={[Colors.main, Colors.teal]}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        </Animated.View>
+        {/* Sliding Active Indicator — a solid coral block, ink icon on top */}
+        <Animated.View
+          style={[
+            styles.activeIndicator,
+            indicatorStyle,
+            { width: 44, height: 44, backgroundColor: Colors.accents.primary },
+          ]}
+        />
 
         {/* Tab Slots */}
         <View style={styles.tabSlotsRow}>
@@ -166,13 +165,13 @@ function NotchedTabBar({ state, descriptors, navigation }: any) {
                   <Ionicons
                     name={(isFocused ? config.activeIcon : config.inactiveIcon) as any}
                     size={22}
-                    color={isFocused ? '#010101' : Colors.graySubtle}
+                    color={isFocused ? Colors.text.onAccent : Colors.text.subtle}
                   />
                 </View>
                 <Text
                   style={[
                     styles.tabLabel,
-                    { color: isFocused ? Colors.main : Colors.graySubtle }
+                    { color: isFocused ? Colors.text.primary : Colors.text.subtle }
                   ]}
                   numberOfLines={1}
                   allowFontScaling={false}
@@ -212,7 +211,7 @@ const styles = StyleSheet.create({
     right: HORIZONTAL_MARGIN,
     zIndex: 1000,
     height: DOCK_HEIGHT,
-    backgroundColor: '#0c1214', // Solid dark background
+    backgroundColor: '#1a1c20', // Solid dark background
     borderRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },

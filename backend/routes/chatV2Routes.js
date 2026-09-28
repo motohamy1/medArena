@@ -3,6 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 const router = express.Router();
 const { callAI } = require('../services/aiService');
 const { interpretClinicalQuery } = require('../services/clinicalQueryInterpreter');
+const { normalizeClinicalQueryForRetrieval } = require('../services/clinicalQueryNormalizationService');
 const { decomposeClinicalTask } = require('../services/clinicalTaskDecomposer');
 const { createRetrievalPlan } = require('../services/retrievalPlanner');
 const { retrieveEvidence } = require('../services/evidenceRetrievalService');
@@ -65,7 +66,7 @@ function dedupeById(items) {
 // Spec V2.1 §0.8/A.3: the model call is bounded. A hung provider must not
 // stall the request indefinitely; it becomes MODEL_FAILURE (an abstention,
 // never a memory fallback).
-const COMPOSER_TIMEOUT_MS = Number(process.env.COMPOSER_TIMEOUT_MS || 30000);
+const COMPOSER_TIMEOUT_MS = Math.min(12000, Math.max(3000, Number(process.env.COMPOSER_TIMEOUT_MS) || 12000));
 
 function withModelTimeout(promise, ms) {
     let timer;
@@ -77,6 +78,34 @@ function withModelTimeout(promise, ms) {
         }, ms);
     });
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function buildRequestDiagnostics({ requestId, query, stageTimings = [], retrieval = null, failureCode = null, failures = [], claimVerification = null } = {}) {
+    const sourceHealth = (retrieval?.sourceHealth || []).map((source) => ({
+        source_id: source.sourceId,
+        status: source.status,
+        error_type: source.errorType || null,
+        latency_ms: source.latencyMs ?? null,
+        attempts: source.attempts ?? null,
+    }));
+    const sourceFailures = [...(retrieval?.failures || []), ...(failures || [])]
+        .map((failure) => ({ source_id: failure.source_id || null, code: failure.code || 'SOURCE_UNAVAILABLE' }))
+        .filter((failure, index, all) => all.findIndex((candidate) => candidate.source_id === failure.source_id && candidate.code === failure.code) === index);
+
+    return {
+        request_id: requestId || null,
+        query_normalization: query?.query_normalization || null,
+        stage_timings: [...stageTimings],
+        retrieval: retrieval ? {
+            candidate_count: retrieval.candidates?.length || 0,
+            rejected_candidate_count: retrieval.rejected_count || 0,
+            selected_count: retrieval.selected?.length || 0,
+            sources: sourceHealth,
+            failures: sourceFailures,
+        } : { sources: sourceHealth, failures: sourceFailures },
+        failure_code: failureCode,
+        claim_verification: claimVerification,
+    };
 }
 
 // Spec §58: record the unanswered question for the scientist/review loop.
@@ -120,7 +149,7 @@ router.post('/', async (req, res) => {
     }
     try {
         logEvent(requestId, 'interpretation_started');
-        const query = await timeStage('parse', async () => interpretClinicalQuery(message, history));
+        let query = await timeStage('parse', async () => interpretClinicalQuery(message, history));
         const sessionState = extractSessionClinicalState(history, message);
 
         // Spec §43/§105: a materially relevant, unresolved ambiguity asks a
@@ -128,7 +157,15 @@ router.post('/', async (req, res) => {
         if (query.clarification_required && query.clarification) {
             logEvent(requestId, 'clarification_required', { token: query.clarification.token });
             const clarificationResponse = createClarificationResponse({ clarification: query.clarification, queryMetadata: query });
-            return res.json({ ...clarificationResponse, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+            return res.json({ ...clarificationResponse, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings }, diagnostics: buildRequestDiagnostics({ requestId, query, stageTimings }) });
+        }
+
+        const normalized = await timeStage('query_normalization', () => normalizeClinicalQueryForRetrieval(query, message));
+        query = normalized.query;
+        if (normalized.status === 'CLARIFICATION_REQUIRED') {
+            logEvent(requestId, 'query_normalization_clarification', { source: query.query_normalization?.source || 'none' });
+            const clarificationResponse = createClarificationResponse({ clarification: { question: normalized.clarification }, queryMetadata: query });
+            return res.json({ ...clarificationResponse, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings }, diagnostics: buildRequestDiagnostics({ requestId, query, stageTimings }) });
         }
 
         // Spec §12/§13: decompose into bounded evidence tasks before planning.
@@ -145,7 +182,7 @@ router.post('/', async (req, res) => {
         if (dosingSafety) {
             logEvent(requestId, 'dosing_safety_clarification', { reason: dosingSafety.reason, missing: dosingSafety.missing });
             const clarificationResponse = createClarificationResponse({ clarification: { question: dosingSafety.question }, queryMetadata: query });
-            return res.json({ ...clarificationResponse, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+            return res.json({ ...clarificationResponse, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings }, diagnostics: buildRequestDiagnostics({ requestId, query, stageTimings }) });
         }
 
         // Spec §35/§64: canonical-keyed evidence cache. A hit within TTL
@@ -177,7 +214,7 @@ router.post('/', async (req, res) => {
                 const status = statusByCode[error.code] || 'SOURCE_UNAVAILABLE';
                 logEvent(requestId, 'retrieval_failed', { code: error.code, failures: error.cause });
                 const abstention = createAbstentionResponse({ status, queryMetadata: query, limitations: [error.code === 'EMBEDDING_FAILURE' ? 'embedding_provider_unavailable' : 'evidence_source_unavailable'], retryable: true });
-                return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+                return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings }, diagnostics: buildRequestDiagnostics({ requestId, query, stageTimings, failureCode: error.code, failures: Array.isArray(error.cause) ? error.cause : [] }) });
             }
         }
         let sufficiency = assessEvidenceSufficiency(retrieval.selected, query, { systemFailure: false, conflicts: [] });
@@ -197,7 +234,7 @@ router.post('/', async (req, res) => {
                 const round2Query = { ...query, temporal_request: sufficiency.missing.includes('current_evidence') ? 'current' : query.temporal_request };
                 // Round 2 gets its own budget slice so an exhausted round-1
                 // budget cannot starve the deep strategy (spec §33).
-                const round2Deadline = Date.now() + (plan.time_budget_ms || 8000);
+                const round2Deadline = Date.now() + Math.min(2500, plan.time_budget_ms || 2500);
                 const retrieval2 = await timeStage('retrieval_deep', () => retrieveEvidence(plan, round2Query, { forceBroad: true, focusTasks: focusTasks.length ? focusTasks : null, deadline: round2Deadline }));
                 const mergedSelected = dedupeById([...retrieval.selected, ...retrieval2.selected]);
                 retrieval = { ...retrieval, selected: mergedSelected, candidates: dedupeById([...retrieval.candidates, ...retrieval2.candidates]), failures: [...retrieval.failures, ...retrieval2.failures] };
@@ -210,9 +247,13 @@ router.post('/', async (req, res) => {
         }
 
         if (['NO_RELEVANT_EVIDENCE', 'NO_EVIDENCE', 'OUTDATED', 'SYSTEM_FAILURE', 'SOURCE_UNAVAILABLE'].includes(sufficiency.status)) {
-            if (sufficiency.status === 'NO_RELEVANT_EVIDENCE' || sufficiency.status === 'NO_EVIDENCE') await recordKnowledgeGap(message, query, requestId);
+            if (sufficiency.status === 'NO_RELEVANT_EVIDENCE' || sufficiency.status === 'NO_EVIDENCE') {
+                // Gap recording is advisory; the user-facing response must not
+                // wait on the knowledge-gap database write.
+                void recordKnowledgeGap(message, query, requestId);
+            }
             const abstention = createAbstentionResponse({ status: sufficiency.status, queryMetadata: query, limitations: sufficiency.missing, retryable: false });
-            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings }, diagnostics: buildRequestDiagnostics({ requestId, query, stageTimings, retrieval }) });
         }
 
         // Coverage matrix drives PARTIAL status + limitations (spec §22/§26).
@@ -220,19 +261,25 @@ router.post('/', async (req, res) => {
         const evidenceContext = buildEvidenceContext(retrieval.selected);
         let draft;
         try {
-            draft = await timeStage('composition', () => withModelTimeout(callAI(buildComposerPrompt(query, evidenceContext, sessionState), message, history), COMPOSER_TIMEOUT_MS));
+            const priorUserTurns = (history || [])
+                .filter((turn) => turn && (turn.isUser === true || turn.role === 'user'))
+                .slice(-6);
+            draft = await timeStage('composition', () => withModelTimeout(
+                callAI(buildComposerPrompt(query, evidenceContext, sessionState), message, priorUserTurns, { timeoutMs: COMPOSER_TIMEOUT_MS, maxOutputTokens: 1600 }),
+                COMPOSER_TIMEOUT_MS + 250,
+            ));
         } catch (error) {
             logEvent(requestId, 'model_failed', { code: error.code || 'MODEL_FAILURE', message: error.message });
             const abstention = createAbstentionResponse({ status: 'SYSTEM_FAILURE', queryMetadata: query, limitations: ['model_provider_unavailable'], retryable: true });
-            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+            return res.json({ ...abstention, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings }, diagnostics: buildRequestDiagnostics({ requestId, query, stageTimings, retrieval, failureCode: error.code || 'MODEL_FAILURE' }) });
         }
-        const response = await composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState, coverage });
+        const response = await timeStage('claim_verification', () => composeEvidenceAnswer({ query, evidence: retrieval.selected, sufficiency, conflicts: [], limitations: retrieval.failures.map((failure) => `${failure.source_id}:${failure.code}`), draftText: draft, provider: 'backend', sessionState, coverage }));
         // Spec §33/§35: stale cached evidence is labeled, never passed as live.
         if (cacheHit && cacheHit.stale && !response.limitations.includes('cached_evidence_not_live_refreshed')) {
             response.limitations.push('cached_evidence_not_live_refreshed');
         }
         logEvent(requestId, 'claim_verification_completed', { claims: response.claims.length, sources: response.sources.length, status: response.evidence.status, cache_hit: Boolean(cacheHit) });
-        return res.json({ ...response, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings } });
+        return res.json({ ...response, request_id: requestId, timing: { total_ms: Date.now() - startedAt, stages: stageTimings }, diagnostics: buildRequestDiagnostics({ requestId, query, stageTimings, retrieval, claimVerification: response.query_metadata?.verification || null }) });
     } catch (error) {
         logEvent(requestId, 'request_error', { code: error.code || 'VALIDATION_FAILURE' });
         return sendStructuredError(res, requestId, error.code || 'VALIDATION_FAILURE', error.message, false, 400);

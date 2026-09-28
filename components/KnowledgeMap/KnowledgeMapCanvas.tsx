@@ -278,7 +278,7 @@ KnowledgeMapCanvas.displayName = 'KnowledgeMapCanvas';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#010101',
+    backgroundColor: '#08090b',
     overflow: 'hidden',
   },
   canvasWrapper: {

@@ -27,7 +27,7 @@ export default function GeneralSpecialtyChat() {
     return (
       <SafeAreaView className="flex-1 bg-background justify-center items-center">
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color="#6ec2be" />
+        <ActivityIndicator size="large" color="#877bf4" />
       </SafeAreaView>
     );
   }

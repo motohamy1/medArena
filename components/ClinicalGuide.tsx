@@ -101,7 +101,7 @@ export default function ClinicalGuide({
             <Ionicons
               name="layers-outline"
               size={12}
-              color={activeSectionFilter === null ? themeColor : '#94a3b8'}
+              color={activeSectionFilter === null ? themeColor : '#8c92a0'}
             />
             <Text
               className={`text-[11px] font-sans-semibold ${
@@ -127,7 +127,7 @@ export default function ClinicalGuide({
                 <Ionicons
                   name={getIconForSection(sec.title)}
                   size={12}
-                  color={isSelected ? themeColor : '#94a3b8'}
+                  color={isSelected ? themeColor : '#8c92a0'}
                 />
                 <Text
                   className={`text-[11px] font-sans-semibold ${
@@ -168,7 +168,7 @@ export default function ClinicalGuide({
               className="flex-row items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.08] border border-white/10"
             >
               <Text className="text-xs font-sans-medium text-gray-300">View All</Text>
-              <Ionicons name="close-circle" size={13} color="#94a3b8" />
+              <Ionicons name="close-circle" size={13} color="#8c92a0" />
             </TouchableOpacity>
           </View>
         </View>
@@ -211,7 +211,7 @@ export default function ClinicalGuide({
           })
         ) : (
           <View className="items-center justify-center py-12 px-6">
-            <Ionicons name="document-text-outline" size={48} color="#404040" />
+            <Ionicons name="document-text-outline" size={48} color="#8c92a0" />
             <Text className="text-gray-400 mt-4 text-center text-sm leading-5">
               Clinical guidelines for this topic are being compiled from active medical references.
             </Text>
@@ -245,55 +245,55 @@ function getSectionCardStyle(title: string, themeColor: string) {
   // Clinical Definition & Overview (Clean Lavender / Indigo)
   if (lower.includes('definition') || lower.includes('overview') || lower.includes('introduction')) {
     return {
-      cardBg: 'rgba(203, 200, 245, 0.08)',
-      cardBorder: 'rgba(203, 200, 245, 0.4)',
-      iconBg: 'rgba(203, 200, 245, 0.2)',
-      iconBorder: 'rgba(203, 200, 245, 0.55)',
-      iconColor: '#cbc8f5',
+      cardBg: 'rgba(176, 175, 235, 0.08)',
+      cardBorder: 'rgba(176, 175, 235, 0.4)',
+      iconBg: 'rgba(176, 175, 235, 0.2)',
+      iconBorder: 'rgba(176, 175, 235, 0.55)',
+      iconColor: '#b0afeb',
     };
   }
 
   // Operative Steps & Techniques (Surgical Cut - Vibrant Mint/Teal)
   if (lower.includes('operative step') || lower.includes('surgical technique') || lower.includes('dissection')) {
     return {
-      cardBg: 'rgba(169, 228, 232, 0.07)',
-      cardBorder: 'rgba(169, 228, 232, 0.35)',
-      iconBg: 'rgba(169, 228, 232, 0.18)',
-      iconBorder: 'rgba(169, 228, 232, 0.5)',
-      iconColor: '#a9e4e8',
+      cardBg: 'rgba(240, 92, 74, 0.07)',
+      cardBorder: 'rgba(240, 92, 74, 0.35)',
+      iconBg: 'rgba(240, 92, 74, 0.18)',
+      iconBorder: 'rgba(240, 92, 74, 0.5)',
+      iconColor: '#f05c4a',
     };
   }
 
   // Preoperative Risk & Preparation (Shield - Rose / Light Amber)
   if (lower.includes('preoperative') || lower.includes('pre-op') || lower.includes('clearance')) {
     return {
-      cardBg: 'rgba(249, 186, 201, 0.07)',
-      cardBorder: 'rgba(249, 186, 201, 0.35)',
-      iconBg: 'rgba(249, 186, 201, 0.18)',
-      iconBorder: 'rgba(249, 186, 201, 0.5)',
-      iconColor: '#f9bac9',
+      cardBg: 'rgba(235, 152, 138, 0.07)',
+      cardBorder: 'rgba(235, 152, 138, 0.35)',
+      iconBg: 'rgba(235, 152, 138, 0.18)',
+      iconBorder: 'rgba(235, 152, 138, 0.5)',
+      iconColor: '#eb988a',
     };
   }
 
   // Clinical Pitfalls & Malpractice Warnings / Critical Alerts (Pastel Rose Pink)
   if (lower.includes('complication') || lower.includes('pitfall') || lower.includes('malpractice') || lower.includes('warning') || lower.includes('red flag') || lower.includes('emergency')) {
     return {
-      cardBg: 'rgba(249, 186, 201, 0.08)',
-      cardBorder: 'rgba(249, 186, 201, 0.45)',
-      iconBg: 'rgba(249, 186, 201, 0.2)',
-      iconBorder: 'rgba(249, 186, 201, 0.6)',
-      iconColor: '#f9bac9',
+      cardBg: 'rgba(235, 152, 138, 0.08)',
+      cardBorder: 'rgba(235, 152, 138, 0.45)',
+      iconBg: 'rgba(235, 152, 138, 0.2)',
+      iconBorder: 'rgba(235, 152, 138, 0.6)',
+      iconColor: '#eb988a',
     };
   }
 
   // Diagnostic / Investigations (Jewel Teal)
   if (lower.includes('diagnostic') || lower.includes('investigation') || lower.includes('workup') || lower.includes('criteria') || lower.includes('scoring')) {
     return {
-      cardBg: 'rgba(109, 194, 189, 0.07)',
-      cardBorder: 'rgba(109, 194, 189, 0.35)',
-      iconBg: 'rgba(109, 194, 189, 0.18)',
-      iconBorder: 'rgba(109, 194, 189, 0.5)',
-      iconColor: '#4bc0b8',
+      cardBg: 'rgba(135, 123, 244, 0.07)',
+      cardBorder: 'rgba(135, 123, 244, 0.35)',
+      iconBg: 'rgba(135, 123, 244, 0.18)',
+      iconBorder: 'rgba(135, 123, 244, 0.5)',
+      iconColor: '#877bf4',
     };
   }
 

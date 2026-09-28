@@ -73,7 +73,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="#111315" />
+      <StatusBar barStyle="light-content" backgroundColor="#23262b" />
 
       {/* Header */}
       <View className="flex-row items-center px-6 py-4 border-b border-white/5">

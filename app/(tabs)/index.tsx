@@ -98,7 +98,7 @@ const Header = () => {
       {/* Profile Avatar / Quick Access with Depth */}
       <TouchableOpacity
         onPress={() => router.push('/(tabs)/profile')}
-        className="w-10 h-10 rounded-full bg-[#0a0a0a] border border-white/10 items-center justify-center"
+        className="w-10 h-10 rounded-full bg-[#08090b] border border-white/10 items-center justify-center"
         style={{
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 3 },
@@ -129,7 +129,7 @@ const SearchBar = ({
   return (
     <View className="px-6 pt-1 pb-0">
       <View
-        className="flex-row items-center h-14 bg-[#080808] rounded-2xl px-4 border border-white/10"
+        className="flex-row items-center h-14 bg-[#08090b] rounded-2xl px-4 border border-white/10"
         style={{
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 6 },
@@ -616,7 +616,7 @@ export default function Index() {
               <Ionicons
                 name="medical"
                 size={14}
-                color={activeTab === 'medicine' ? Colors.main : '#8e8e93'}
+                color={activeTab === 'medicine' ? Colors.main : '#8c92a0'}
                 style={{ marginRight: 6 }}
               />
               <Text
@@ -635,8 +635,8 @@ export default function Index() {
                 activeTab === 'surgery' && [
                   styles.tabButtonActive,
                   {
-                    backgroundColor: 'rgba(109, 194, 189, 0.16)',
-                    borderColor: 'rgba(109, 194, 189, 0.45)',
+                    backgroundColor: 'rgba(135, 123, 244, 0.16)',
+                    borderColor: 'rgba(135, 123, 244, 0.45)',
                   },
                 ],
               ]}
@@ -646,13 +646,13 @@ export default function Index() {
               <Ionicons
                 name="cut"
                 size={14}
-                color={activeTab === 'surgery' ? '#4bc0b8' : '#8e8e93'}
+                color={activeTab === 'surgery' ? '#877bf4' : '#8c92a0'}
                 style={{ marginRight: 6 }}
               />
               <Text
                 style={[
                   styles.tabText,
-                  activeTab === 'surgery' && { color: '#4bc0b8', fontWeight: '700' },
+                  activeTab === 'surgery' && { color: '#877bf4', fontWeight: '700' },
                 ]}
               >
                 Surgery
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 10,
     marginBottom: 4,
-    backgroundColor: '#121719',
+    backgroundColor: '#23262b',
     padding: 3.5,
     borderRadius: 14,
     borderWidth: 1,
@@ -735,6 +735,6 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 13,
     fontFamily: 'PlexSans_600SemiBold',
-    color: '#8e8e93',
+    color: '#8c92a0',
   },
 });

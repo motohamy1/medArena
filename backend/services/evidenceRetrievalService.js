@@ -97,7 +97,7 @@ function normalizeLegacyResult(item) {
         evidence_depth: abstract && abstract.length > 200 ? 'abstract' : 'metadata_only',
         authority_tier: sourceId === 'fda' ? 1 : sourceId === 'europe_pmc' ? 2 : 3,
         authority_score: sourceId === 'fda' ? 1 : sourceId === 'europe_pmc' ? 0.85 : 0.7,
-        relevance_score: item.relevance_score || 0.6,
+        relevance_score: item.relevance_score ?? 0,
         evidence_type_score: sourceId === 'clinicaltrials_gov' ? 0.5 : 0.7,
         retrieved_at: new Date().toISOString(),
     };
@@ -108,10 +108,10 @@ function normalizeLegacyResult(item) {
 // evidence.
 const MAX_QUERY_VARIANTS = 4;
 
-async function fetchFromSource(sourcePlan, queryText, query, { broad = false } = {}) {
+async function fetchFromSource(sourcePlan, queryText, query, { broad = false, signal } = {}) {
     if (sourcePlan.source_id === 'internal_knowledge') {
         // Hybrid vector→lexical→exact search with structured failures.
-        const { items, failures } = await searchInternalKnowledge(queryText, sourcePlan.max_candidates || 5, 0.55);
+        const { items, failures } = await searchInternalKnowledge(queryText, sourcePlan.max_candidates || 5, 0.55, { signal });
         if (!items.length && failures.length) {
             // All internal mechanisms failed — surface the real reason instead
             // of silently continuing as if the source returned nothing.
@@ -119,14 +119,14 @@ async function fetchFromSource(sourcePlan, queryText, query, { broad = false } =
         }
         return normalizeInternalKnowledge(items);
     }
-    if (sourcePlan.source_id === 'pubmed') return (await searchPubMed(queryText, { limit: sourcePlan.max_candidates })).map(normalizeLegacyResult);
+    if (sourcePlan.source_id === 'pubmed') return (await searchPubMed(queryText, { limit: sourcePlan.max_candidates, signal })).map(normalizeLegacyResult);
     // Each planned source fetches only its own component; the aggregate fetcher
     // otherwise drags trials/FDA into plans that never asked for them.
     // Strict fetch: structured failures surface through executeSourceCall
     // instead of a silent [] (spec §95). "NO_RESULTS" (a legitimately empty
     // search) is NOT a failure — only network/HTTP problems throw.
     const strictFetch = async (sourceId, options) => {
-        const { items, failures } = await fetchClinicalLiteratureStrict(queryText, query.category || 'physicians', options);
+        const { items, failures } = await fetchClinicalLiteratureStrict(queryText, query.category || 'physicians', { ...options, signal });
         const hardFailures = failures.filter((f) => f.code !== 'NO_RESULTS');
         if (!items.length && hardFailures.length) throw createEvidenceError('SOURCE_UNAVAILABLE', `${sourceId} failed: ${hardFailures.map((f) => f.code).join(',')}`, hardFailures);
         return items.map(normalizeLegacyResult);
@@ -143,6 +143,37 @@ function dedupeKey(item) {
     if (item.pmid) return `pmid:${String(item.pmid)}`;
     const title = String(item.title || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
     return title ? `title:${title}` : null;
+}
+
+const MODIFIER_CONDITIONS = new Set(['obesity', 'pregnancy', 'renal', 'hepatic']);
+const MIN_DIRECT_RELEVANCE = 0.55;
+
+function getPrimaryRetrievalAnchor(query = {}) {
+    const explicit = (query.retrieval_anchors || []).filter(Boolean);
+    if (explicit.length) return explicit[0];
+
+    const conditions = Array.isArray(query.conditions) ? query.conditions : [];
+    const primaryCondition = conditions.find((condition) => condition?.concept && !MODIFIER_CONDITIONS.has(condition.concept))?.concept;
+    if (primaryCondition) return primaryCondition;
+    if (query.condition && !MODIFIER_CONDITIONS.has(query.condition)) return query.condition;
+
+    return query.medications?.[0]
+        || query.drug_classes?.[0]
+        || query.symptoms?.[0]
+        || query.labs?.[0]?.name
+        || query.condition
+        || null;
+}
+
+function evidenceAnchorRelevance(item, query = {}) {
+    const anchor = getPrimaryRetrievalAnchor(query);
+    const anchorTokens = getQueryTokens(anchor);
+    if (!anchorTokens.length) return 0;
+    return computeRelevance(`${item?.title || ''} ${item?.content || item?.excerpt || ''}`, anchorTokens);
+}
+
+function isEvidenceRelevant(item, query = {}) {
+    return evidenceAnchorRelevance(item, query) >= MIN_DIRECT_RELEVANCE;
 }
 
 async function retrieveEvidence(plan, query, { forceBroad = false, focusTasks = null, deadline = null } = {}) {
@@ -166,8 +197,15 @@ async function retrieveEvidence(plan, query, { forceBroad = false, focusTasks = 
         // its own per-attempt timeout/retry/breaker (spec V2.1 A.3/A.6) — a
         // slow or failed attempt never blocks the other source families.
         for (const queryText of variants) {
-            const { result: items, health, error } = await executeSourceCall(sourcePlan.source_id, () =>
-                fetchFromSource(sourcePlan, queryText, query, { broad: broad || forceBroad })
+            if (budgetExceeded()) {
+                sourceHealth.push({ sourceId: sourcePlan.source_id, status: 'skipped', errorType: 'RETRIEVAL_TIMEOUT', checkedAt: new Date().toISOString() });
+                failures.push({ source_id: sourcePlan.source_id, code: 'RETRIEVAL_TIMEOUT', message: 'request time budget exhausted before the next query variant' });
+                break;
+            }
+            const { result: items, health, error } = await executeSourceCall(
+                sourcePlan.source_id,
+                ({ signal }) => fetchFromSource(sourcePlan, queryText, query, { broad: broad || forceBroad, signal }),
+                { deadline },
             );
             sourceHealth.push(health);
             if (items) {
@@ -222,29 +260,34 @@ async function retrieveEvidence(plan, query, { forceBroad = false, focusTasks = 
     // variants inflate token-overlap against their own 2-3 tokens, so rescore
     // every candidate against the complete query before ranking/selection.
     const fullQueryText = query.normalized_query || (query.search_terms || []).join(' ');
-    if (fullQueryText) {
-        const fullTokens = getQueryTokens(fullQueryText);
-        if (fullTokens.length) {
-            for (const candidate of candidates) {
-                candidate.relevance_score = computeRelevance(`${candidate.title || ''} ${candidate.content || ''}`, fullTokens);
-            }
-        }
+    const fullTokens = getQueryTokens(fullQueryText);
+    for (const candidate of candidates) {
+        candidate.query_relevance_score = computeRelevance(`${candidate.title || ''} ${candidate.content || ''}`, fullTokens);
+        candidate.relevance_score = evidenceAnchorRelevance(candidate, query);
     }
+    const rawCandidateCount = candidates.length;
+    candidates = candidates.filter((candidate) => candidate.relevance_score >= MIN_DIRECT_RELEVANCE);
     // Freshness applied after relevance rescore, before ranking (spec §15).
     const requireCurrent = query.temporal_request === 'current';
     candidates = candidates.map((item) => applyFreshness(item, { requireCurrent }));
-    if (!candidates.length && failures.length === (plan.plans || []).length) {
-        // All sources failed (not "no relevant evidence"): classify honestly.
-        const embeddingFailed = failures.some((f) => f.code === 'EMBEDDING_FAILURE');
-        const dbFailed = failures.some((f) => f.code === 'DATABASE_FAILURE');
-        throw createEvidenceError(
-            embeddingFailed && failures.length === 1 ? 'EMBEDDING_FAILURE' : dbFailed ? 'DATABASE_FAILURE' : 'SOURCE_UNAVAILABLE',
-            'All planned evidence sources failed',
-            failures
-        );
+    const plannedSourceIds = [...new Set((plan.plans || []).map((sourcePlan) => sourcePlan.source_id))];
+    const healthySourceIds = new Set(sourceHealth.filter((entry) => entry.status === 'healthy').map((entry) => entry.sourceId));
+    if (rawCandidateCount === 0 && plannedSourceIds.length > 0 && healthySourceIds.size === 0) {
+        // Multiple variants may fail for one adapter; count source families,
+        // not individual query attempts, so outages never masquerade as empty
+        // evidence and timeouts remain retryable.
+        const codes = new Set(failures.map((failure) => failure.code));
+        const code = codes.has('RETRIEVAL_TIMEOUT')
+            ? 'RETRIEVAL_TIMEOUT'
+            : codes.has('EMBEDDING_FAILURE')
+                ? 'EMBEDDING_FAILURE'
+                : codes.has('DATABASE_FAILURE')
+                    ? 'DATABASE_FAILURE'
+                    : 'SOURCE_UNAVAILABLE';
+        throw createEvidenceError(code, 'All planned evidence sources failed before returning usable results', failures);
     }
     const ranked = rankEvidence(candidates, query);
-    return { candidates, failures, sourceHealth, ranked, selected: selectEvidence(ranked, Math.min(plan.retrieval_budget || 20, 8)) };
+    return { candidates, rejected_count: rawCandidateCount - candidates.length, failures, sourceHealth, ranked, selected: selectEvidence(ranked, Math.min(plan.retrieval_budget || 20, 8)) };
 }
 
-module.exports = { retrieveEvidence, applyFreshness, normalizeInternalKnowledge, normalizeLegacyResult };
+module.exports = { retrieveEvidence, applyFreshness, normalizeInternalKnowledge, normalizeLegacyResult, getPrimaryRetrievalAnchor, evidenceAnchorRelevance, isEvidenceRelevant };

@@ -342,7 +342,7 @@ export default function PearlsTab() {
                   <Ionicons
                     name={cat.icon as any}
                     size={12}
-                    color={isSelected ? Colors.main : '#9CA3AF'}
+                    color={isSelected ? Colors.main : '#8c92a0'}
                   />
                   <Text
                     className={`text-[12px] ${
@@ -392,8 +392,8 @@ export default function PearlsTab() {
                     <LinearGradient
                       colors={[
                         `${item.specialtyColor}22`,
-                        '#121922',
-                        '#0a0e14',
+                        '#23262b',
+                        '#1a1c20',
                       ]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
@@ -450,7 +450,7 @@ export default function PearlsTab() {
                           <Ionicons
                             name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
                             size={15}
-                            color={isBookmarked ? Colors.gold : '#9ca3af'}
+                            color={isBookmarked ? Colors.gold : '#8c92a0'}
                           />
                         </TouchableOpacity>
                       </View>
@@ -486,7 +486,7 @@ export default function PearlsTab() {
                           <Ionicons
                             name="book-outline"
                             size={12}
-                            color="#94a3b8"
+                            color="#8c92a0"
                             style={{ flexShrink: 0 }}
                           />
                           <Text
@@ -622,7 +622,7 @@ export default function PearlsTab() {
                     } catch {}
                     setSelectedPearl(savedItem);
                   }}
-                  className="p-4 rounded-2xl bg-[#0c1017] border border-white/10"
+                  className="p-4 rounded-2xl bg-[#1a1c20] border border-white/10"
                 >
                   <View className="flex-row items-center justify-between mb-2 gap-2">
                     <View
@@ -750,7 +750,7 @@ export default function PearlsTab() {
                         color={
                           bookmarkedIds.includes(selectedPearl.id)
                             ? Colors.gold
-                            : '#9ca3af'
+                            : '#8c92a0'
                         }
                       />
                     </TouchableOpacity>
@@ -760,7 +760,7 @@ export default function PearlsTab() {
                       activeOpacity={0.7}
                       style={styles.modalActionButton}
                     >
-                      <Ionicons name="close" size={20} color="#cbd5e1" />
+                      <Ionicons name="close" size={20} color="#ccd1dc" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -797,7 +797,7 @@ export default function PearlsTab() {
                     {
                       borderLeftColor: Colors.teal,
                       borderLeftWidth: 3.5,
-                      backgroundColor: 'rgba(109, 194, 189, 0.08)',
+                      backgroundColor: 'rgba(135, 123, 244, 0.08)',
                     },
                   ]}
                 >
@@ -821,7 +821,7 @@ export default function PearlsTab() {
                     {
                       borderLeftColor: Colors.main,
                       borderLeftWidth: 3.5,
-                      backgroundColor: 'rgba(169, 228, 232, 0.06)',
+                      backgroundColor: 'rgba(240, 92, 74, 0.06)',
                     },
                   ]}
                 >
@@ -846,7 +846,7 @@ export default function PearlsTab() {
                       {
                         borderLeftColor: Colors.pink,
                         borderLeftWidth: 3.5,
-                        backgroundColor: 'rgba(249, 186, 201, 0.08)',
+                        backgroundColor: 'rgba(235, 152, 138, 0.08)',
                       },
                     ]}
                   >
@@ -869,7 +869,7 @@ export default function PearlsTab() {
 
                 {/* Section 4: Citation */}
                 <View style={styles.modalCitationBox}>
-                  <Ionicons name="book" size={14} color="#94a3b8" />
+                  <Ionicons name="book" size={14} color="#8c92a0" />
                   <Text style={styles.modalCitationText}>
                     Evidence Source: {selectedPearl.citation}
                   </Text>
@@ -909,7 +909,7 @@ export default function PearlsTab() {
       >
         <View className="flex-1 bg-black/80 items-center justify-center px-6">
           <View
-            className="w-full max-w-sm rounded-3xl bg-[#0c1017] border border-gold/30 p-6"
+            className="w-full max-w-sm rounded-3xl bg-[#1a1c20] border border-gold/30 p-6"
             style={{
               shadowColor: Colors.gold,
               shadowOffset: { width: 0, height: 10 },
@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1.5,
     overflow: 'hidden',
-    backgroundColor: '#0c1017',
+    backgroundColor: '#1a1c20',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create({
   metricBadgeText: {
     fontSize: 9.5,
     fontFamily: 'PlexMono_500Medium',
-    color: '#e2e8f0',
+    color: '#ccd1dc',
     fontWeight: '600',
     includeFontPadding: false,
   },
@@ -1096,7 +1096,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   ruleSummaryText: {
-    color: '#cbd5e1',
+    color: '#ccd1dc',
     fontFamily: 'PlexSans_400Regular',
     fontSize: 12,
     lineHeight: 16.5,
@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
   citationText: {
     fontSize: 10,
     fontFamily: 'PlexMono_500Medium',
-    color: '#94a3b8',
+    color: '#8c92a0',
     flex: 1,
     flexShrink: 1,
     includeFontPadding: false,
@@ -1158,7 +1158,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalSheetContainer: {
-    backgroundColor: '#0a0f14',
+    backgroundColor: '#1a1c20',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
@@ -1266,7 +1266,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   modalSectionBody: {
-    color: '#e2e8f0',
+    color: '#ccd1dc',
     fontFamily: 'PlexSans_400Regular',
     fontSize: 13.5,
     lineHeight: 20,
@@ -1285,7 +1285,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalCitationText: {
-    color: '#94a3b8',
+    color: '#8c92a0',
     fontFamily: 'PlexMono_500Medium',
     fontSize: 11,
     flex: 1,
@@ -1306,7 +1306,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   modalConsultBtnText: {
-    color: '#010101',
+    color: '#08090b',
     fontFamily: 'PlexSans_700Bold',
     fontSize: 13.5,
     fontWeight: '700',

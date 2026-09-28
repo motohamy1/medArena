@@ -222,8 +222,8 @@ export const DailyClinicalPearls = () => {
               <LinearGradient
                 colors={[
                   `${item.specialtyColor}22`,
-                  '#121922',
-                  '#0a0e14',
+                  '#23262b',
+                  '#1a1c20',
                 ]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -301,7 +301,7 @@ export const DailyClinicalPearls = () => {
                     <Ionicons
                       name="book-outline"
                       size={12}
-                      color="#94a3b8"
+                      color="#8c92a0"
                       style={{ flexShrink: 0 }}
                     />
                     <Text
@@ -397,7 +397,7 @@ export const DailyClinicalPearls = () => {
                     activeOpacity={0.7}
                     style={styles.modalCloseButton}
                   >
-                    <Ionicons name="close" size={20} color="#cbd5e1" />
+                    <Ionicons name="close" size={20} color="#ccd1dc" />
                   </TouchableOpacity>
                 </View>
 
@@ -433,7 +433,7 @@ export const DailyClinicalPearls = () => {
                     {
                       borderLeftColor: Colors.teal,
                       borderLeftWidth: 3.5,
-                      backgroundColor: 'rgba(109, 194, 189, 0.08)',
+                      backgroundColor: 'rgba(135, 123, 244, 0.08)',
                     },
                   ]}
                 >
@@ -457,7 +457,7 @@ export const DailyClinicalPearls = () => {
                     {
                       borderLeftColor: Colors.main,
                       borderLeftWidth: 3.5,
-                      backgroundColor: 'rgba(169, 228, 232, 0.06)',
+                      backgroundColor: 'rgba(240, 92, 74, 0.06)',
                     },
                   ]}
                 >
@@ -482,7 +482,7 @@ export const DailyClinicalPearls = () => {
                       {
                         borderLeftColor: Colors.pink,
                         borderLeftWidth: 3.5,
-                        backgroundColor: 'rgba(249, 186, 201, 0.08)',
+                        backgroundColor: 'rgba(235, 152, 138, 0.08)',
                       },
                     ]}
                   >
@@ -505,7 +505,7 @@ export const DailyClinicalPearls = () => {
 
                 {/* SECTION 4: Citation */}
                 <View style={styles.modalCitationBox}>
-                  <Ionicons name="book" size={14} color="#94a3b8" />
+                  <Ionicons name="book" size={14} color="#8c92a0" />
                   <Text style={styles.modalCitationText}>
                     Evidence Source: {selectedPearl.citation}
                   </Text>
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1.5,
     overflow: 'hidden',
-    backgroundColor: '#0c1017',
+    backgroundColor: '#1a1c20',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   metricBadgeText: {
     fontSize: 9.5,
     fontFamily: 'PlexMono_500Medium',
-    color: '#e2e8f0',
+    color: '#ccd1dc',
     fontWeight: '600',
     includeFontPadding: false,
   },
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   ruleSummaryText: {
-    color: '#cbd5e1',
+    color: '#ccd1dc',
     fontFamily: 'PlexSans_400Regular',
     fontSize: 12,
     lineHeight: 16.5,
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
   citationText: {
     fontSize: 10,
     fontFamily: 'PlexMono_500Medium',
-    color: '#94a3b8',
+    color: '#8c92a0',
     flex: 1,
     flexShrink: 1,
     includeFontPadding: false,
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalSheetContainer: {
-    backgroundColor: '#0a0f14',
+    backgroundColor: '#1a1c20',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   modalSectionBody: {
-    color: '#e2e8f0',
+    color: '#ccd1dc',
     fontFamily: 'PlexSans_400Regular',
     fontSize: 13.5,
     lineHeight: 20,
@@ -897,7 +897,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalCitationText: {
-    color: '#94a3b8',
+    color: '#8c92a0',
     fontFamily: 'PlexMono_500Medium',
     fontSize: 11,
     flex: 1,
@@ -918,7 +918,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   modalConsultBtnText: {
-    color: '#010101',
+    color: '#08090b',
     fontFamily: 'PlexSans_700Bold',
     fontSize: 13.5,
     fontWeight: '700',

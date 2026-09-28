@@ -5,7 +5,7 @@ export const VASCULAR_SURGERY_SPECIALTY: SpecialtyData = {
   name: 'Vascular',
   scientificName: 'Vascular & Endovascular Surgery',
   icon: 'git-network',
-  color: '#dbd4fd', // Lavender
+  color: '#b0afeb', // Lavender
   illustration: require('../../assets/images/specialties/cardiology.jpg'),
   generalScope: 'Comprehensive open vascular and endovascular surgery, aortic aneurysm repairs, cerebrovascular disease, peripheral arterial disease, and dialysis access.',
   categories: [

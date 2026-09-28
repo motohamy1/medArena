@@ -60,8 +60,8 @@ export const KnowledgeMapEdge: React.FC<KnowledgeMapEdgeProps> = React.memo(
     const pathData = `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
 
     const accent = themeColor || Colors.accent;
-    const strokeColor = isSelected ? accent : '#384d52';
-    const underGlowColor = isSelected ? `${accent}45` : 'rgba(78, 115, 122, 0.18)';
+    const strokeColor = isSelected ? accent : '#40444c';
+    const underGlowColor = isSelected ? `${accent}45` : 'rgba(64, 68, 76, 0.18)';
     const strokeWidth = isSelected ? 2.4 : 1.7;
     const strokeOpacity = isDimmed ? 0.15 : isSelected ? 1.0 : 0.75;
 
@@ -69,8 +69,8 @@ export const KnowledgeMapEdge: React.FC<KnowledgeMapEdgeProps> = React.memo(
     const midX = (x1 + x2) / 2;
     const midY = (y1 + y2) / 2;
 
-    const pinColor = isSelected ? accent : '#527278';
-    const pinGlow = isSelected ? `${accent}66` : 'rgba(82, 114, 120, 0.3)';
+    const pinColor = isSelected ? accent : '#535862';
+    const pinGlow = isSelected ? `${accent}66` : 'rgba(64, 68, 76, 0.3)';
 
     return (
       <G>

@@ -19,85 +19,85 @@ import { dbService } from '../../../services/dbService';
 import { SpecialtyData, SPECIALTY_KNOWLEDGE, getSpecialtyKnowledge } from '../../../constants/SpecialtyData';
 import { Colors } from '../../../constants/Colors';
 
-// Category theme config matching the 4-color base palette (#a9e4e8, #4bc0b8, #cbc8f5, #f9bac9)
+// Category theme config matching the 4-color base palette (#f05c4a, #877bf4, #b0afeb, #eb988a)
 const getCategoryTheme = (categoryId: string, index: number) => {
   switch (categoryId) {
     case 'emergencies':
       return {
-        color: '#f9bac9', // Pastel Pink / Rose
-        gradient: ['#3e1628', '#240d18', '#14070e'] as const,
-        border: 'rgba(249, 186, 201, 0.45)',
-        iconBg: 'rgba(249, 186, 201, 0.22)',
-        iconBorder: 'rgba(249, 186, 201, 0.55)',
-        shadow: '#f9bac9',
+        color: '#eb988a', // Pastel Pink / Rose
+        gradient: ['#321612', '#321612', '#321612'] as const,
+        border: 'rgba(235, 152, 138, 0.45)',
+        iconBg: 'rgba(235, 152, 138, 0.22)',
+        iconBorder: 'rgba(235, 152, 138, 0.55)',
+        shadow: '#eb988a',
         tag: 'EMERGENCY',
       };
     case 'clinical_topics':
       return {
-        color: '#a9e4e8', // Luminous Mint
-        gradient: ['#143836', '#0d2524', '#061716'] as const,
-        border: 'rgba(169, 228, 232, 0.45)',
-        iconBg: 'rgba(169, 228, 232, 0.22)',
-        iconBorder: 'rgba(169, 228, 232, 0.55)',
-        shadow: '#a9e4e8',
+        color: '#f05c4a', // Luminous Mint
+        gradient: ['#1d1c34', '#1d1c34', '#061716'] as const,
+        border: 'rgba(240, 92, 74, 0.45)',
+        iconBg: 'rgba(240, 92, 74, 0.22)',
+        iconBorder: 'rgba(240, 92, 74, 0.55)',
+        shadow: '#f05c4a',
         tag: 'GUIDELINES',
       };
     case 'tools':
       return {
-        color: '#4bc0b8', // Medical Jewel Teal
-        gradient: ['#123635', '#0b2423', '#051615'] as const,
-        border: 'rgba(109, 194, 189, 0.45)',
-        iconBg: 'rgba(109, 194, 189, 0.22)',
-        iconBorder: 'rgba(109, 194, 189, 0.55)',
-        shadow: '#4bc0b8',
+        color: '#877bf4', // Medical Jewel Teal
+        gradient: ['#1d1c34', '#1d1c34', '#1d1c34'] as const,
+        border: 'rgba(135, 123, 244, 0.45)',
+        iconBg: 'rgba(135, 123, 244, 0.22)',
+        iconBorder: 'rgba(135, 123, 244, 0.55)',
+        shadow: '#877bf4',
         tag: 'DIAGNOSTICS',
       };
     case 'research':
       return {
-        color: '#cbc8f5', // Soft Lavender / Periwinkle
-        gradient: ['#292048', '#1a1432', '#0e0b1c'] as const,
-        border: 'rgba(203, 200, 245, 0.45)',
-        iconBg: 'rgba(203, 200, 245, 0.22)',
-        iconBorder: 'rgba(203, 200, 245, 0.55)',
-        shadow: '#cbc8f5',
+        color: '#b0afeb', // Soft Lavender / Periwinkle
+        gradient: ['#1d1c34', '#1d1c34', '#1d1c34'] as const,
+        border: 'rgba(176, 175, 235, 0.45)',
+        iconBg: 'rgba(176, 175, 235, 0.22)',
+        iconBorder: 'rgba(176, 175, 235, 0.55)',
+        shadow: '#b0afeb',
         tag: 'EVIDENCE',
       };
     default: {
       const palette = [
         {
-          color: '#a9e4e8',
-          gradient: ['#143836', '#0d2524', '#061716'] as const,
-          border: 'rgba(169, 228, 232, 0.45)',
-          iconBg: 'rgba(169, 228, 232, 0.22)',
-          iconBorder: 'rgba(169, 228, 232, 0.55)',
-          shadow: '#a9e4e8',
+          color: '#f05c4a',
+          gradient: ['#1d1c34', '#1d1c34', '#061716'] as const,
+          border: 'rgba(240, 92, 74, 0.45)',
+          iconBg: 'rgba(240, 92, 74, 0.22)',
+          iconBorder: 'rgba(240, 92, 74, 0.55)',
+          shadow: '#f05c4a',
           tag: 'SECTION',
         },
         {
-          color: '#4bc0b8',
-          gradient: ['#123635', '#0b2423', '#051615'] as const,
-          border: 'rgba(109, 194, 189, 0.45)',
-          iconBg: 'rgba(109, 194, 189, 0.22)',
-          iconBorder: 'rgba(109, 194, 189, 0.55)',
-          shadow: '#4bc0b8',
+          color: '#877bf4',
+          gradient: ['#1d1c34', '#1d1c34', '#1d1c34'] as const,
+          border: 'rgba(135, 123, 244, 0.45)',
+          iconBg: 'rgba(135, 123, 244, 0.22)',
+          iconBorder: 'rgba(135, 123, 244, 0.55)',
+          shadow: '#877bf4',
           tag: 'SECTION',
         },
         {
-          color: '#cbc8f5',
-          gradient: ['#292048', '#1a1432', '#0e0b1c'] as const,
-          border: 'rgba(203, 200, 245, 0.45)',
-          iconBg: 'rgba(203, 200, 245, 0.22)',
-          iconBorder: 'rgba(203, 200, 245, 0.55)',
-          shadow: '#cbc8f5',
+          color: '#b0afeb',
+          gradient: ['#1d1c34', '#1d1c34', '#1d1c34'] as const,
+          border: 'rgba(176, 175, 235, 0.45)',
+          iconBg: 'rgba(176, 175, 235, 0.22)',
+          iconBorder: 'rgba(176, 175, 235, 0.55)',
+          shadow: '#b0afeb',
           tag: 'SECTION',
         },
         {
-          color: '#f9bac9',
-          gradient: ['#3e1628', '#240d18', '#14070e'] as const,
-          border: 'rgba(249, 186, 201, 0.45)',
-          iconBg: 'rgba(249, 186, 201, 0.22)',
-          iconBorder: 'rgba(249, 186, 201, 0.55)',
-          shadow: '#f9bac9',
+          color: '#eb988a',
+          gradient: ['#321612', '#321612', '#321612'] as const,
+          border: 'rgba(235, 152, 138, 0.45)',
+          iconBg: 'rgba(235, 152, 138, 0.22)',
+          iconBorder: 'rgba(235, 152, 138, 0.55)',
+          shadow: '#eb988a',
           tag: 'SECTION',
         },
       ];
@@ -265,7 +265,7 @@ export default function SpecialtyDashboard() {
         </View>
 
         {/* Live Search Bar */}
-        <View className="bg-[#121719] rounded-2xl flex-row items-center px-4 py-3 border border-white/10 mx-5 mt-4">
+        <View className="bg-[#23262b] rounded-2xl flex-row items-center px-4 py-3 border border-white/10 mx-5 mt-4">
             <Ionicons name="search" size={20} color={specialty.color} />
             <TextInput
               className="flex-1 text-white ml-3 font-sans-medium text-sm"
@@ -338,7 +338,7 @@ export default function SpecialtyDashboard() {
                 })}
               </View>
             ) : (
-              <View className="p-6 rounded-3xl bg-[#0d1214] border border-white/10 items-center">
+              <View className="p-6 rounded-3xl bg-[#1a1c20] border border-white/10 items-center">
                 <Ionicons name="search" size={36} color={Colors.grayMuted} />
                 <Text className="text-white font-sans-bold text-base mt-2 text-center">
                   No direct topic found for &quot;{searchText}&quot;
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cardDesc: {
-    color: '#d1d5db',
+    color: '#abb1be',
     fontFamily: 'PlexSans_400Regular',
     fontSize: 11.5,
     lineHeight: 16,
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
   },
   aiButtonText: {
     flex: 1,
-    color: '#010101',
+    color: '#08090b',
     fontFamily: 'PlexSans_700Bold',
     fontSize: 13.5,
     fontWeight: '700',

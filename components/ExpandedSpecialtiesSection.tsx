@@ -94,7 +94,7 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
       </View>
 
       {/* Segmented Filter Bar */}
-      <View className="flex-row items-center gap-2 mb-5 p-1 bg-[#090e10] rounded-2xl border border-white/10">
+      <View className="flex-row items-center gap-2 mb-5 p-1 bg-[#1a1c20] rounded-2xl border border-white/10">
         <TouchableOpacity
           onPress={() => setActiveTab('all')}
           className="flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5"
@@ -108,11 +108,11 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           <Ionicons
             name="apps"
             size={13}
-            color={activeTab === 'all' ? Colors.main : '#737373'}
+            color={activeTab === 'all' ? Colors.main : '#6f7580'}
           />
           <Text
             className="text-[12px] font-sans-bold"
-            style={{ color: activeTab === 'all' ? Colors.main : '#9ca3af' }}
+            style={{ color: activeTab === 'all' ? Colors.main : '#8c92a0' }}
           >
             All Disciplines
           </Text>
@@ -122,8 +122,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           onPress={() => setActiveTab('surgery')}
           className="flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5"
           style={{
-            backgroundColor: activeTab === 'surgery' ? '#f9bac925' : 'transparent',
-            borderColor: activeTab === 'surgery' ? '#f9bac960' : 'transparent',
+            backgroundColor: activeTab === 'surgery' ? '#eb988a25' : 'transparent',
+            borderColor: activeTab === 'surgery' ? '#eb988a60' : 'transparent',
             borderWidth: 1,
           }}
           activeOpacity={0.7}
@@ -131,11 +131,11 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           <Ionicons
             name="cut"
             size={13}
-            color={activeTab === 'surgery' ? '#f9bac9' : '#737373'}
+            color={activeTab === 'surgery' ? '#eb988a' : '#6f7580'}
           />
           <Text
             className="text-[12px] font-sans-bold"
-            style={{ color: activeTab === 'surgery' ? '#f9bac9' : '#9ca3af' }}
+            style={{ color: activeTab === 'surgery' ? '#eb988a' : '#8c92a0' }}
           >
             Surgical Suite
           </Text>
@@ -145,8 +145,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           onPress={() => setActiveTab('medicine')}
           className="flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5"
           style={{
-            backgroundColor: activeTab === 'medicine' ? '#4bc0b825' : 'transparent',
-            borderColor: activeTab === 'medicine' ? '#4bc0b860' : 'transparent',
+            backgroundColor: activeTab === 'medicine' ? '#877bf425' : 'transparent',
+            borderColor: activeTab === 'medicine' ? '#877bf460' : 'transparent',
             borderWidth: 1,
           }}
           activeOpacity={0.7}
@@ -154,11 +154,11 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
           <Ionicons
             name="medical"
             size={13}
-            color={activeTab === 'medicine' ? '#4bc0b8' : '#737373'}
+            color={activeTab === 'medicine' ? '#877bf4' : '#6f7580'}
           />
           <Text
             className="text-[12px] font-sans-bold"
-            style={{ color: activeTab === 'medicine' ? '#4bc0b8' : '#9ca3af' }}
+            style={{ color: activeTab === 'medicine' ? '#877bf4' : '#8c92a0' }}
           >
             Medicine
           </Text>
@@ -170,8 +170,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3 px-0.5">
             <View className="flex-row items-center gap-2">
-              <View className="w-6 h-6 rounded-lg bg-[#f9bac9]20 items-center justify-center border border-[#f9bac9]40">
-                <Ionicons name="cut" size={12} color="#f9bac9" />
+              <View className="w-6 h-6 rounded-lg bg-[#eb988a]20 items-center justify-center border border-[#eb988a]40">
+                <Ionicons name="cut" size={12} color="#eb988a" />
               </View>
               <Text className="text-[15px] font-sans-bold text-white">
                 Surgical Suite & Operative Medicine
@@ -197,7 +197,7 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
                 ]}
               >
                 <LinearGradient
-                  colors={[`${item.color}15`, `${item.color}05`, '#080c0e']}
+                  colors={[`${item.color}15`, `${item.color}05`, '#1a1c20']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.cardGradient}
@@ -300,8 +300,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3 px-0.5">
             <View className="flex-row items-center gap-2">
-              <View className="w-6 h-6 rounded-lg bg-[#4bc0b8]20 items-center justify-center border border-[#4bc0b8]40">
-                <Ionicons name="fitness" size={12} color="#4bc0b8" />
+              <View className="w-6 h-6 rounded-lg bg-[#877bf4]20 items-center justify-center border border-[#877bf4]40">
+                <Ionicons name="fitness" size={12} color="#877bf4" />
               </View>
               <Text className="text-[15px] font-sans-bold text-white">
                 More Medical Specialties
@@ -327,7 +327,7 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
                 ]}
               >
                 <LinearGradient
-                  colors={[`${spec.color}14`, `${spec.color}04`, '#080c0e']}
+                  colors={[`${spec.color}14`, `${spec.color}04`, '#1a1c20']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.cardGradient}
@@ -521,7 +521,7 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
                     {selectedSurgery.casesOrExamples.map((item, i) => (
                       <View
                         key={i}
-                        className="p-3 rounded-xl bg-[#090d0f] border border-white/10"
+                        className="p-3 rounded-xl bg-[#1a1c20] border border-white/10"
                       >
                         <Text className="text-[13px] font-sans-bold text-white mb-1">
                           {item.name}
@@ -585,8 +585,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
                       elevation: 6,
                     }}
                   >
-                    <Ionicons name="chatbubbles" size={16} color="#010101" />
-                    <Text className="text-[#010101] font-sans-bold text-[13px]">
+                    <Ionicons name="chatbubbles" size={16} color="#08090b" />
+                    <Text className="text-[#08090b] font-sans-bold text-[13px]">
                       Consult Surgical AI Advisor
                     </Text>
                   </TouchableOpacity>
@@ -707,7 +707,7 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
                     {selectedMedicine.highYieldTopics.map((top, i) => (
                       <View
                         key={i}
-                        className="p-3 rounded-xl bg-[#090d0f] border border-white/10"
+                        className="p-3 rounded-xl bg-[#1a1c20] border border-white/10"
                       >
                         <Text className="text-[13px] font-sans-bold text-white mb-1">
                           {top.title}
@@ -749,8 +749,8 @@ export const ExpandedSpecialtiesSection: React.FC<ExpandedSpecialtiesSectionProp
                       elevation: 6,
                     }}
                   >
-                    <Ionicons name="chatbubbles" size={16} color="#010101" />
-                    <Text className="text-[#010101] font-sans-bold text-[13px]">
+                    <Ionicons name="chatbubbles" size={16} color="#08090b" />
+                    <Text className="text-[#08090b] font-sans-bold text-[13px]">
                       Consult Specialist AI ({selectedMedicine.name})
                     </Text>
                   </TouchableOpacity>
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
-    backgroundColor: '#080c0d',
+    backgroundColor: '#1a1c20',
   },
   cardGradient: {
     padding: 14,
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#080c0e',
+    backgroundColor: '#1a1c20',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,

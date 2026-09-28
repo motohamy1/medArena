@@ -46,7 +46,7 @@ export const KnowledgeMapLegend: React.FC<KnowledgeMapLegendProps> = ({
           <Text style={styles.title}>Map Legend</Text>
         </View>
         <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="close" size={16} color="#94a3b8" />
+          <Ionicons name="close" size={16} color="#8c92a0" />
         </TouchableOpacity>
       </View>
 
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-    backgroundColor: '#0c1214',
+    backgroundColor: '#1a1c20',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 16,
@@ -118,6 +118,6 @@ const styles = StyleSheet.create({
   itemLabel: {
     fontSize: 10.5,
     fontFamily: 'PlexSans_500Medium',
-    color: '#cbd5e1',
+    color: '#ccd1dc',
   },
 });

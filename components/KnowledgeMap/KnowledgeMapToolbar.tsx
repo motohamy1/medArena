@@ -37,7 +37,7 @@ export const KnowledgeMapToolbar: React.FC<KnowledgeMapToolbarProps> = ({
         accessibilityLabel="Zoom in"
         activeOpacity={0.7}
       >
-        <Ionicons name="add" size={18} color="#e2e8f0" />
+        <Ionicons name="add" size={18} color="#ccd1dc" />
       </TouchableOpacity>
 
       <View style={styles.divider} />
@@ -49,7 +49,7 @@ export const KnowledgeMapToolbar: React.FC<KnowledgeMapToolbarProps> = ({
         accessibilityLabel="Zoom out"
         activeOpacity={0.7}
       >
-        <Ionicons name="remove" size={18} color="#e2e8f0" />
+        <Ionicons name="remove" size={18} color="#ccd1dc" />
       </TouchableOpacity>
 
       <View style={styles.divider} />
@@ -61,7 +61,7 @@ export const KnowledgeMapToolbar: React.FC<KnowledgeMapToolbarProps> = ({
         accessibilityLabel="Center map on root"
         activeOpacity={0.7}
       >
-        <Ionicons name="locate-outline" size={16} color="#e2e8f0" />
+        <Ionicons name="locate-outline" size={16} color="#ccd1dc" />
       </TouchableOpacity>
 
       <View style={styles.divider} />
@@ -73,7 +73,7 @@ export const KnowledgeMapToolbar: React.FC<KnowledgeMapToolbarProps> = ({
         accessibilityLabel="Reset map view"
         activeOpacity={0.7}
       >
-        <Ionicons name="refresh-outline" size={16} color="#e2e8f0" />
+        <Ionicons name="refresh-outline" size={16} color="#ccd1dc" />
       </TouchableOpacity>
 
       {onToggleLegend && (
@@ -89,7 +89,7 @@ export const KnowledgeMapToolbar: React.FC<KnowledgeMapToolbarProps> = ({
             <Ionicons
               name={isLegendOpen ? 'key' : 'key-outline'}
               size={15}
-              color={isLegendOpen ? themeColor : '#94a3b8'}
+              color={isLegendOpen ? themeColor : '#8c92a0'}
             />
           </TouchableOpacity>
         </>
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0e1416',
+    backgroundColor: '#1a1c20',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 24,

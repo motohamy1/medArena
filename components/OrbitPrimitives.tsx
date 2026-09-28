@@ -71,7 +71,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
           cx={center}
           cy={center}
           r={outerRadius}
-          stroke="#a9e4e8"
+          stroke="#f05c4a"
           strokeWidth={1}
           strokeOpacity={0.06}
           fill="none"
@@ -122,7 +122,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
       strokeWidth = 1.4;
     } else if (isNodeAxis) {
       tickLength = 5.5;
-      strokeColor = 'rgba(109, 194, 189, 0.6)';
+      strokeColor = 'rgba(135, 123, 244, 0.6)';
       strokeWidth = 1.2;
     } else if (isMajor) {
       tickLength = 3.5;
@@ -185,7 +185,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
         cx={center}
         cy={center}
         r={outerRadius}
-        stroke="#4bc0b8"
+        stroke="#877bf4"
         strokeWidth={1.4}
         strokeDasharray="6 20"
         strokeOpacity={0.45}
@@ -211,7 +211,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
         cx={center}
         cy={center}
         r={hubRadius + 6}
-        stroke="rgba(109, 194, 189, 0.22)"
+        stroke="rgba(135, 123, 244, 0.22)"
         strokeWidth={0.8}
         strokeDasharray="2 5"
         fill="none"
@@ -224,7 +224,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
         y1={center - hubRadius - 2}
         x2={center}
         y2={center - innerRadius + 2}
-        stroke="rgba(109, 194, 189, 0.35)"
+        stroke="rgba(135, 123, 244, 0.35)"
         strokeWidth={1}
         strokeDasharray="2 3"
       />
@@ -234,7 +234,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
         y1={center + hubRadius + 2}
         x2={center}
         y2={center + innerRadius - 2}
-        stroke="rgba(109, 194, 189, 0.35)"
+        stroke="rgba(135, 123, 244, 0.35)"
         strokeWidth={1}
         strokeDasharray="2 3"
       />
@@ -244,7 +244,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
         y1={center}
         x2={center - innerRadius + 2}
         y2={center}
-        stroke="rgba(109, 194, 189, 0.35)"
+        stroke="rgba(135, 123, 244, 0.35)"
         strokeWidth={1}
         strokeDasharray="2 3"
       />
@@ -254,7 +254,7 @@ export const OrbitRings: React.FC<OrbitRingsProps> = ({
         y1={center}
         x2={center + innerRadius - 2}
         y2={center}
-        stroke="rgba(109, 194, 189, 0.35)"
+        stroke="rgba(135, 123, 244, 0.35)"
         strokeWidth={1}
         strokeDasharray="2 3"
       />
@@ -303,7 +303,7 @@ export const OrbitNode: React.FC<OrbitNodeProps> = ({
             style={{
               width: size,
               height: size,
-              backgroundColor: '#080c0e',
+              backgroundColor: '#1a1c20',
               borderColor: `${specialty.color}45`,
               shadowColor: specialty.color,
               shadowOffset: { width: 0, height: 4 },
@@ -364,7 +364,7 @@ export const OrbitNode: React.FC<OrbitNodeProps> = ({
             style={{
               width: size,
               height: size,
-              backgroundColor: '#060a0c',
+              backgroundColor: '#08090b',
               borderWidth: 1.5,
               borderColor: `${specialty.color}65`,
               shadowColor: specialty.color,
@@ -394,7 +394,7 @@ export const OrbitNode: React.FC<OrbitNodeProps> = ({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. ORBIT CENTER HUB
-// Medical AI: Dominant Primary focal point in Electric Lime / Mint (#a9e4e8)
+// Medical AI: Dominant Primary focal point in Electric Lime / Mint (#f05c4a)
 // Surgical AI: Sleek technical obsidian surface with precision dual-ring teal border
 // ─────────────────────────────────────────────────────────────────────────────
 interface OrbitCenterHubProps {
@@ -420,7 +420,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
     return (
       <TouchableOpacity
         onPress={onPress}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full items-center justify-center border-4 border-[#010101] z-10 px-2 text-center"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full items-center justify-center border-4 border-[#08090b] z-10 px-2 text-center"
         style={{
           width: size,
           height: size,
@@ -433,9 +433,9 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
         }}
         activeOpacity={0.85}
       >
-        <Ionicons name={icon} size={isPrimaryHub ? 26 : 24} color="#010101" />
+        <Ionicons name={icon} size={isPrimaryHub ? 26 : 24} color="#08090b" />
         <Text
-          className="text-[11.5px] font-sans-bold text-[#010101] text-center mt-1 leading-tight max-w-[85px]"
+          className="text-[11.5px] font-sans-bold text-[#08090b] text-center mt-1 leading-tight max-w-[85px]"
           allowFontScaling={false}
           style={{ textAlign: 'center', includeFontPadding: false }}
         >
@@ -443,7 +443,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
         </Text>
         {subtitle ? (
           <Text
-            className="text-[9.5px] text-[#010101]/80 font-sans-bold text-center leading-tight mt-0.5"
+            className="text-[9.5px] text-[#08090b]/80 font-sans-bold text-center leading-tight mt-0.5"
             allowFontScaling={false}
             style={{ textAlign: 'center', includeFontPadding: false }}
           >
@@ -462,7 +462,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
       style={{
         width: size,
         height: size,
-        shadowColor: '#4bc0b8',
+        shadowColor: '#877bf4',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.35,
         shadowRadius: 10,
@@ -472,7 +472,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
     >
       {/* Outer Technical Dashed Ring */}
       <View
-        className="absolute rounded-full border border-[#4bc0b8]/40"
+        className="absolute rounded-full border border-[#877bf4]/40"
         style={{
           width: size + 6,
           height: size + 6,
@@ -481,16 +481,16 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
       />
 
       {/* 4 Precision Cardinal Reticle Ticks on Hub */}
-      <View className="absolute -top-1 w-2 h-[1.5px] bg-[#4bc0b8] rounded-full" />
-      <View className="absolute -bottom-1 w-2 h-[1.5px] bg-[#4bc0b8] rounded-full" />
-      <View className="absolute -left-1 h-2 w-[1.5px] bg-[#4bc0b8] rounded-full" />
-      <View className="absolute -right-1 h-2 w-[1.5px] bg-[#4bc0b8] rounded-full" />
+      <View className="absolute -top-1 w-2 h-[1.5px] bg-[#877bf4] rounded-full" />
+      <View className="absolute -bottom-1 w-2 h-[1.5px] bg-[#877bf4] rounded-full" />
+      <View className="absolute -left-1 h-2 w-[1.5px] bg-[#877bf4] rounded-full" />
+      <View className="absolute -right-1 h-2 w-[1.5px] bg-[#877bf4] rounded-full" />
 
       {/* Hub Core: Obsidian base with crisp surgical teal border */}
       <View
-        className="w-full h-full rounded-full items-center justify-center px-2 bg-[#080e11] border-2 border-[#4bc0b8]/80"
+        className="w-full h-full rounded-full items-center justify-center px-2 bg-[#1a1c20] border-2 border-[#877bf4]/80"
       >
-        <Ionicons name={icon} size={24} color="#4bc0b8" />
+        <Ionicons name={icon} size={24} color="#877bf4" />
         <Text
           className="text-[11.5px] font-sans-bold text-white text-center mt-1 leading-tight max-w-[85px]"
           allowFontScaling={false}
@@ -500,7 +500,7 @@ export const OrbitCenterHub: React.FC<OrbitCenterHubProps> = ({
         </Text>
         {subtitle ? (
           <Text
-            className="text-[9.5px] text-[#4bc0b8] font-mono font-bold uppercase tracking-wider text-center leading-tight mt-0.5"
+            className="text-[9.5px] text-[#877bf4] font-mono font-bold uppercase tracking-wider text-center leading-tight mt-0.5"
             allowFontScaling={false}
             style={{ textAlign: 'center', includeFontPadding: false }}
           >
@@ -538,7 +538,7 @@ export const OrbitSectionLabel: React.FC<OrbitSectionLabelProps> = ({
   const defaultBadgeLabel = isMedical ? 'MEDICAL' : 'SURGICAL';
   const defaultBadgeSubtitle = isMedical ? 'Clinical specialties' : 'Operative specialties';
   const iconName: keyof typeof Ionicons.glyphMap = isMedical ? 'medical' : 'cut';
-  const accentColor = isMedical ? '#a9e4e8' : '#4bc0b8';
+  const accentColor = isMedical ? '#f05c4a' : '#877bf4';
 
   if (isCompactBadgeOnly) {
     return (

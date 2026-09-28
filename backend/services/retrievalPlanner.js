@@ -5,7 +5,7 @@ const BUDGETS = Object.freeze({ guideline_question: 20, drug_question: 20, diagn
 
 // Request-level time budgets (spec §33). Targets, not arbitrary kill switches:
 // per-source timeouts (sourceHealthService) remain independent.
-const TIME_BUDGETS_MS = Object.freeze({ SIMPLE: 4000, NORMAL: 8000, DEEP: 12000 });
+const TIME_BUDGETS_MS = Object.freeze({ SIMPLE: 3500, NORMAL: 6000, DEEP: 8000 });
 
 // Condition-anchored focus queries: "acute cholangitis" (the adjacent pair
 // containing the condition) plus "condition + modifier" variants map to the
@@ -61,7 +61,15 @@ function createRetrievalPlan(query, sessionState = {}, tasks = []) {
     const plans = [];
     const addPlan = (sourceFamily, sourceId, queries, maxCandidates) => {
         const source = getSource(sourceId);
-        if (source?.enabled) plans.push({ source_family: sourceFamily, source_id: sourceId, queries, max_candidates: maxCandidates });
+        if (!source?.enabled) return;
+        const existing = plans.find((plan) => plan.source_id === sourceId);
+        if (existing) {
+            existing.source_families = [...new Set([...existing.source_families, sourceFamily])];
+            existing.queries = [...new Set([...existing.queries, ...queries].filter(Boolean))];
+            existing.max_candidates = Math.max(existing.max_candidates, maxCandidates);
+            return;
+        }
+        plans.push({ source_family: sourceFamily, source_families: [sourceFamily], source_id: sourceId, queries: [...new Set(queries.filter(Boolean))], max_candidates: maxCandidates });
     };
     if (['guideline_question', 'clinical_management', 'diagnosis_question', 'drug_question', 'latest_evidence', 'complex_case', 'follow_up'].includes(intent)) {
         // Internal curated RAG first (spec §3/§26: search_internal_knowledge),
@@ -96,7 +104,7 @@ function createRetrievalPlan(query, sessionState = {}, tasks = []) {
         minimum_required_authority: intent === 'research_question' ? 2 : 1,
         require_current_evidence: current,
         time_budget_ms: TIME_BUDGETS_MS[complexity] || TIME_BUDGETS_MS.NORMAL,
-        max_rounds: intent === 'research_question' || intent === 'complex_case' ? 4 : 3,
+        max_rounds: 2,
         stop_criteria: ['authoritative_source', 'direct_relevance', 'population_match', 'no_unresolved_conflict'],
     };
 }

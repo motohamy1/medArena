@@ -65,101 +65,101 @@ const SECTION_CONFIG: Record<
 > = {
   "EMERGENCY PROTOCOL & IMMEDIATE ACTION": {
     color: Colors.pink,
-    border: "rgba(249, 186, 201, 0.45)",
+    border: "rgba(235, 152, 138, 0.45)",
     icon: "alert-circle-outline",
     label: "Emergency Protocol & Action",
   },
   "DIAGNOSTIC CRITERIA & SCORING": {
     color: Colors.teal,
-    border: "rgba(109, 194, 189, 0.45)",
+    border: "rgba(135, 123, 244, 0.45)",
     icon: "checkbox-outline",
     label: "Diagnostic Criteria & Scoring",
   },
   "DIAGNOSTIC CRITERIA": {
     color: Colors.teal,
-    border: "rgba(109, 194, 189, 0.45)",
+    border: "rgba(135, 123, 244, 0.45)",
     icon: "checkbox-outline",
     label: "Diagnostic Criteria",
   },
   "CLINICAL ASSESSMENT": {
     color: Colors.main,
-    border: "rgba(169, 228, 232, 0.45)",
+    border: "rgba(240, 92, 74, 0.45)",
     icon: "clipboard-outline",
     label: "Clinical Assessment",
   },
   "DIFFERENTIAL DIAGNOSIS": {
     color: Colors.lavender,
-    border: "rgba(203, 200, 245, 0.45)",
+    border: "rgba(176, 175, 235, 0.45)",
     icon: "git-branch-outline",
     label: "Differential Diagnosis",
   },
   "INVESTIGATIONS / WORKUP": {
     color: Colors.teal,
-    border: "rgba(109, 194, 189, 0.45)",
+    border: "rgba(135, 123, 244, 0.45)",
     icon: "pulse-outline",
     label: "Investigations / Workup",
   },
   "INVESTIGATIONS": {
     color: Colors.teal,
-    border: "rgba(109, 194, 189, 0.45)",
+    border: "rgba(135, 123, 244, 0.45)",
     icon: "flask-outline",
     label: "Investigations",
   },
   "MANAGEMENT PROTOCOL": {
     color: Colors.main,
-    border: "rgba(169, 228, 232, 0.45)",
+    border: "rgba(240, 92, 74, 0.45)",
     icon: "medical-outline",
     label: "Management Protocol",
   },
   "MANAGEMENT & PHARMACOTHERAPY": {
     color: Colors.main,
-    border: "rgba(169, 228, 232, 0.45)",
+    border: "rgba(240, 92, 74, 0.45)",
     icon: "medical-outline",
     label: "Management & Pharmacotherapy",
   },
   "FIRST-LINE PHARMACOTHERAPY": {
     color: Colors.main,
-    border: "rgba(169, 228, 232, 0.45)",
+    border: "rgba(240, 92, 74, 0.45)",
     icon: "medical-outline",
     label: "First-Line Pharmacotherapy",
   },
   "PEDIATRIC SAFETY & CONTRAINDICATIONS": {
     color: Colors.pink,
-    border: "rgba(249, 186, 201, 0.45)",
+    border: "rgba(235, 152, 138, 0.45)",
     icon: "warning-outline",
     label: "Pediatric Safety & Contraindications",
   },
   "RECOMMENDED REGIMEN & DOSING": {
     color: Colors.teal,
-    border: "rgba(109, 194, 189, 0.45)",
+    border: "rgba(135, 123, 244, 0.45)",
     icon: "flask-outline",
     label: "Recommended Regimen & Dosing",
   },
   "SURGICAL / PROCEDURAL CONSIDERATIONS": {
     color: Colors.lavender,
-    border: "rgba(203, 200, 245, 0.45)",
+    border: "rgba(176, 175, 235, 0.45)",
     icon: "cut-outline",
     label: "Surgical Considerations",
   },
   "CLINICAL PEARLS & PITFALLS": {
     color: Colors.lavender,
-    border: "rgba(203, 200, 245, 0.45)",
+    border: "rgba(176, 175, 235, 0.45)",
     icon: "sparkles-outline",
     label: "Clinical Pearls & Pitfalls",
   },
   "RED FLAGS / EMERGENCY": {
     color: Colors.pink,
-    border: "rgba(249, 186, 201, 0.45)",
+    border: "rgba(235, 152, 138, 0.45)",
     icon: "warning-outline",
     label: "Red Flags & Warnings",
   },
 };
 
 const FALLBACK_PALETTE = [
-  { color: Colors.lavender, border: "rgba(203, 200, 245, 0.45)" },
-  { color: Colors.teal, border: "rgba(109, 194, 189, 0.45)" },
-  { color: Colors.pink, border: "rgba(249, 186, 201, 0.45)" },
-  { color: Colors.main, border: "rgba(169, 228, 232, 0.45)" },
+  { color: Colors.lavender, border: "rgba(176, 175, 235, 0.45)" },
+  { color: Colors.teal, border: "rgba(135, 123, 244, 0.45)" },
+  { color: Colors.pink, border: "rgba(235, 152, 138, 0.45)" },
+  { color: Colors.main, border: "rgba(240, 92, 74, 0.45)" },
 ];
 
 // Spec V2.1 §V2.1.5: evidence badges are server-authoritative. The label and
@@ -169,17 +169,17 @@ const EVIDENCE_BADGES: Record<string, { label: string; color: string }> = {
   VERIFIED: { label: "Verified", color: Colors.accent },
   VERIFIED_RECENT: { label: "Verified Recent", color: Colors.accent },
   CACHED_VERIFIED: { label: "Cached (Verified)", color: Colors.lavender },
-  PARTIAL: { label: "Partial Evidence", color: "#fbbf24" },
-  OUTDATED: { label: "Outdated Evidence", color: "#fbbf24" },
+  PARTIAL: { label: "Partial Evidence", color: "#f6c53c" },
+  OUTDATED: { label: "Outdated Evidence", color: "#f6c53c" },
   CONFLICTING: { label: "Conflicting Evidence", color: Colors.pink },
   NO_EVIDENCE: { label: "No Evidence", color: Colors.pink },
   NO_RELEVANT_EVIDENCE: { label: "No Relevant Evidence", color: Colors.pink },
-  CLARIFICATION_REQUIRED: { label: "Clarification Needed", color: "#fbbf24" },
+  CLARIFICATION_REQUIRED: { label: "Clarification Needed", color: "#f6c53c" },
   SOURCE_UNAVAILABLE: { label: "Evidence Service Unavailable", color: Colors.pink },
-  RETRIEVAL_TIMEOUT: { label: "Retrieval Timed Out", color: "#fbbf24" },
+  RETRIEVAL_TIMEOUT: { label: "Retrieval Timed Out", color: "#f6c53c" },
   SYSTEM_FAILURE: { label: "System Failure", color: Colors.pink },
-  offline_knowledge: { label: "Offline (Not Live-Verified)", color: "#fbbf24" },
-  conversation: { label: "Assistant", color: "#94a3b8" },
+  offline_knowledge: { label: "Offline (Not Live-Verified)", color: "#f6c53c" },
+  conversation: { label: "Assistant", color: "#8c92a0" },
 };
 
 function getEvidenceBadge(sourceType?: string) {
@@ -292,7 +292,7 @@ const ThinkingIndicator: React.FC = () => {
       <View className="w-7 h-7 rounded-full bg-turquoise/15 items-center justify-center border border-turquoise/35">
         <Ionicons name="sparkles" size={13} color={TURQUOISE} />
       </View>
-      <View className="flex-row items-center gap-1.5 bg-[#0c1017] border border-white/10 px-4 py-2.5 rounded-3xl rounded-tl-md">
+      <View className="flex-row items-center gap-1.5 bg-[#1a1c20] border border-white/10 px-4 py-2.5 rounded-3xl rounded-tl-md">
         <Text className="text-gray-400 text-xs font-sans-medium mr-1">Consulting knowledge base</Text>
         <Animated.View className="w-1.5 h-1.5 rounded-full bg-turquoise" style={s1} />
         <Animated.View className="w-1.5 h-1.5 rounded-full bg-turquoise" style={s2} />
@@ -389,7 +389,7 @@ const ChatBubble: React.FC<{
           <Text className="text-terracotta text-xs font-sans-bold">System Notice</Text>
           <Text className="text-gray-500 text-[10px] font-mono ml-auto">{message.timestamp}</Text>
         </View>
-        <View className="bg-[#0c1017] border border-terracotta/30 rounded-3xl rounded-tl-md p-4">
+        <View className="bg-[#1a1c20] border border-terracotta/30 rounded-3xl rounded-tl-md p-4">
           <View className="flex-row items-center gap-2 mb-2">
             <Ionicons name="alert-circle-outline" size={16} color={Colors.terracotta} />
             <Text className="text-terracotta text-xs font-sans-bold uppercase tracking-wider">
@@ -421,7 +421,7 @@ const ChatBubble: React.FC<{
         className="mb-7 px-4 w-full"
       >
         <View className="flex-row justify-center items-center mb-3">
-          <View className="flex-row bg-[#151c1f] p-1 rounded-full border border-white/10 shadow-sm">
+          <View className="flex-row bg-[#23262b] p-1 rounded-full border border-white/10 shadow-sm">
             <TouchableOpacity
               onPress={() => {
                 Haptics.selectionAsync();
@@ -435,7 +435,7 @@ const ChatBubble: React.FC<{
               <Ionicons
                 name="document-text-outline"
                 size={13}
-                color={responseTab === 'response' ? TURQUOISE : '#8e8e93'}
+                color={responseTab === 'response' ? TURQUOISE : '#8c92a0'}
               />
               <Text
                 className={`text-xs font-sans-semibold ${
@@ -459,7 +459,7 @@ const ChatBubble: React.FC<{
               <Ionicons
                 name="git-network-outline"
                 size={13}
-                color={responseTab === 'map' ? TURQUOISE : '#8e8e93'}
+                color={responseTab === 'map' ? TURQUOISE : '#8c92a0'}
               />
               <Text
                 className={`text-xs font-sans-semibold ${
@@ -478,7 +478,7 @@ const ChatBubble: React.FC<{
               height: 420,
               borderRadius: 16,
               overflow: 'hidden',
-              backgroundColor: '#010101',
+              backgroundColor: '#08090b',
             }}
           >
             <KnowledgeMap
@@ -514,7 +514,7 @@ const ChatBubble: React.FC<{
             {hasSections ? (
               <View className="gap-3">
                 {plainText.length > 0 && (
-                  <View className="bg-[#0c1017] border border-white/10 rounded-2xl p-4">
+                  <View className="bg-[#1a1c20] border border-white/10 rounded-2xl p-4">
                     <FormattedClinicalText text={plainText} />
                   </View>
                 )}
@@ -535,7 +535,7 @@ const ChatBubble: React.FC<{
                   return (
                     <View
                       key={`sec-${sIdx}`}
-                      className="rounded-2xl overflow-hidden bg-[#0c1017]"
+                      className="rounded-2xl overflow-hidden bg-[#1a1c20]"
                       style={{
                         borderWidth: 1,
                         borderColor: sectionBorder,
@@ -570,9 +570,9 @@ const ChatBubble: React.FC<{
               </View>
             ) : (
               <View
-                className="rounded-2xl overflow-hidden bg-[#0c1017] border"
+                className="rounded-2xl overflow-hidden bg-[#1a1c20] border"
                 style={{
-                  borderColor: "rgba(109, 194, 189, 0.35)",
+                  borderColor: "rgba(135, 123, 244, 0.35)",
                   shadowColor: "#000",
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.3,
@@ -583,8 +583,8 @@ const ChatBubble: React.FC<{
                 <View
                   className="flex-row items-center justify-between px-4 py-2 border-b"
                   style={{
-                    backgroundColor: "rgba(109, 194, 189, 0.10)",
-                    borderBottomColor: "rgba(109, 194, 189, 0.20)",
+                    backgroundColor: "rgba(135, 123, 244, 0.10)",
+                    borderBottomColor: "rgba(135, 123, 244, 0.20)",
                   }}
                 >
                   <View className="flex-row items-center gap-2">
@@ -598,7 +598,7 @@ const ChatBubble: React.FC<{
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     className="opacity-70 active:opacity-100"
                   >
-                    <Ionicons name="copy-outline" size={13} color="#94a3b8" />
+                    <Ionicons name="copy-outline" size={13} color="#8c92a0" />
                   </TouchableOpacity>
                 </View>
                 <View className="p-4">
@@ -620,7 +620,7 @@ const ChatBubble: React.FC<{
                 {message.citations.map((cit) => (
                   <View
                     key={cit.id}
-                    className="bg-[#0c1017] border border-white/10 rounded-xl p-3 mb-2"
+                    className="bg-[#1a1c20] border border-white/10 rounded-xl p-3 mb-2"
                   >
                     <View className="flex-row items-start gap-2">
                       <View className="px-2 py-0.5 rounded-full bg-lavender/20 mt-0.5">
@@ -654,7 +654,7 @@ const ChatBubble: React.FC<{
                       key={`tab-sug-${sIdx}`}
                       onPress={() => onSelectSuggestion?.(sug)}
                       activeOpacity={0.7}
-                      className="flex-row items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-[#0c1214] border border-turquoise/30 active:opacity-60"
+                      className="flex-row items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-[#1a1c20] border border-turquoise/30 active:opacity-60"
                     >
                       <Ionicons name="arrow-forward-circle" size={14} color={TURQUOISE} />
                       <Text className="text-gray-200 text-xs font-sans-medium leading-4 flex-1">
@@ -690,20 +690,20 @@ const ChatBubble: React.FC<{
       <View className="max-w-[85%] items-end">
         <View className="flex-row items-center gap-1.5 mb-1.5 pr-1">
           <Text className="text-gray-400 text-[10px] font-mono">{message.timestamp}</Text>
-          <Text className="text-lavender text-xs font-sans-bold">Doctor</Text>
+          <Text className="text-main text-xs font-sans-bold">Doctor</Text>
         </View>
         <View
           className="rounded-3xl rounded-tr-md overflow-hidden shadow-bubble"
           style={{ maxWidth: "85%" }}
         >
           <LinearGradient
-            colors={[Colors.lavender, '#9d74e8']}
+            colors={[Colors.main, Colors.pink]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
           <View className="px-4 py-3">
-            <Text className="text-[#010101] text-sm font-sans-bold leading-5">
+            <Text className="text-[#08090b] text-sm font-sans-bold leading-5">
               {message.text}
             </Text>
           </View>
@@ -1043,10 +1043,10 @@ const ChatTab = () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setIsHistoryModalVisible(true);
             }}
-            className="p-2 rounded-xl bg-[#121719] border border-white/10 flex-row items-center gap-1.5 active:opacity-70"
+            className="p-2 rounded-xl bg-[#23262b] border border-white/10 flex-row items-center gap-1.5 active:opacity-70"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="time-outline" size={18} color="#9ca3af" />
+            <Ionicons name="time-outline" size={18} color="#8c92a0" />
             {sessions.length > 0 && (
               <View className="px-1.5 py-0.2 rounded-full bg-white/10">
                 <Text className="text-[10px] text-gray-300 font-mono font-bold">
@@ -1068,7 +1068,7 @@ const ChatTab = () => {
 
           {/* Map toggle if topic exists */}
           {contextTopic && (
-            <View className="flex-row bg-[#121719] p-1 rounded-xl border border-white/10 ml-1">
+            <View className="flex-row bg-[#23262b] p-1 rounded-xl border border-white/10 ml-1">
               <TouchableOpacity
                 onPress={() => setActiveMode('chat')}
                 className={`px-2.5 py-1 rounded-lg ${
@@ -1078,7 +1078,7 @@ const ChatTab = () => {
                 <Ionicons
                   name="chatbubbles-outline"
                   size={12}
-                  color={activeMode === 'chat' ? TURQUOISE : '#8e8e93'}
+                  color={activeMode === 'chat' ? TURQUOISE : '#8c92a0'}
                 />
               </TouchableOpacity>
               <TouchableOpacity
@@ -1090,7 +1090,7 @@ const ChatTab = () => {
                 <Ionicons
                   name="git-network-outline"
                   size={12}
-                  color={activeMode === 'map' ? TURQUOISE : '#8e8e93'}
+                  color={activeMode === 'map' ? TURQUOISE : '#8c92a0'}
                 />
               </TouchableOpacity>
             </View>
@@ -1100,7 +1100,7 @@ const ChatTab = () => {
 
       {/* Screen Body: Knowledge Map Mode vs Chat Stream Mode */}
       {activeMode === 'map' && contextTopic ? (
-        <View className="flex-1 bg-[#010101]">
+        <View className="flex-1 bg-[#08090b]">
           <KnowledgeMap
             topic={contextTopic}
             specialty={contextSpecialty || undefined}
@@ -1168,7 +1168,7 @@ const ChatTab = () => {
                     <TouchableOpacity
                       key={preset.id || pIdx}
                       onPress={() => handleSend(preset.prompt)}
-                      className="bg-[#0c1017] border border-white/10 p-3.5 rounded-2xl flex-row items-center justify-between active:opacity-70"
+                      className="bg-[#1a1c20] border border-white/10 p-3.5 rounded-2xl flex-row items-center justify-between active:opacity-70"
                     >
                       <View className="flex-1 mr-2">
                         <Text className="text-white text-xs font-sans-semibold mb-0.5">
@@ -1229,7 +1229,7 @@ const ChatTab = () => {
             className="px-4 pt-2.5 bg-background border-t border-white/5"
           >
             <View
-              className="flex-row items-center bg-[#0c1017] border border-white/10 rounded-2xl px-4 py-2.5"
+              className="flex-row items-center bg-[#1a1c20] border border-white/10 rounded-2xl px-4 py-2.5"
               style={{
                 minHeight: 52,
                 alignItems: inputHeight > MIN_INPUT_HEIGHT ? "flex-end" : "center",
@@ -1244,7 +1244,7 @@ const ChatTab = () => {
                 value={inputText}
                 onChangeText={updateComposerText}
                 placeholder="Guidelines, dosages, criteria..."
-                placeholderTextColor="#6b7280"
+                placeholderTextColor="#6f7580"
                 className="flex-1 text-white text-[15px] font-sans py-1 leading-5"
                 style={{ minHeight: MIN_INPUT_HEIGHT, maxHeight: MAX_INPUT_HEIGHT }}
                 returnKeyType="send"
@@ -1267,15 +1267,15 @@ const ChatTab = () => {
                 disabled={!inputText.trim() || isTyping}
                 className="w-10 h-10 rounded-xl items-center justify-center ml-2.5 active:opacity-75"
                 style={{
-                  backgroundColor: inputText.trim() && !isTyping ? TURQUOISE : "#1a2228",
+                  backgroundColor: inputText.trim() && !isTyping ? TURQUOISE : "#23262b",
                   borderWidth: 1,
-                  borderColor: inputText.trim() && !isTyping ? "rgba(0, 240, 255, 0.4)" : "rgba(255, 255, 255, 0.05)",
+                  borderColor: inputText.trim() && !isTyping ? "rgba(135, 123, 244, 0.4)" : "rgba(255, 255, 255, 0.05)",
                 }}
               >
                 <Ionicons
                   name="arrow-up"
                   size={20}
-                  color={inputText.trim() && !isTyping ? "#010101" : "#4b5563"}
+                  color={inputText.trim() && !isTyping ? "#08090b" : "#535862"}
                 />
               </TouchableOpacity>
             </View>
@@ -1335,7 +1335,7 @@ const ChatTab = () => {
             >
               {sessions.length === 0 ? (
                 <View className="items-center justify-center py-16">
-                  <Ionicons name="chatbubbles-outline" size={40} color="#4b5563" />
+                  <Ionicons name="chatbubbles-outline" size={40} color="#8c92a0" />
                   <Text className="text-gray-400 text-sm font-sans-medium mt-3">
                     No past consultations yet
                   </Text>
@@ -1363,8 +1363,8 @@ const ChatTab = () => {
                       activeOpacity={0.75}
                       className={`p-3.5 mb-2.5 rounded-2xl border flex-row items-center justify-between ${
                         isActive
-                          ? 'bg-[#112428] border-turquoise/50'
-                          : 'bg-[#0d1316] border-white/10'
+                          ? 'bg-[#1d1c34] border-turquoise/50'
+                          : 'bg-[#1a1c20] border-white/10'
                       }`}
                     >
                       <View className="flex-1 mr-3 min-w-0">
@@ -1398,7 +1398,7 @@ const ChatTab = () => {
                         className="p-2 rounded-lg bg-red-950/30 border border-red-800/30 active:opacity-60"
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Ionicons name="trash-outline" size={15} color="#f87171" />
+                        <Ionicons name="trash-outline" size={15} color="#eb988a" />
                       </TouchableOpacity>
                     </TouchableOpacity>
                   );
@@ -1424,9 +1424,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#0c1619',
+    backgroundColor: '#1a1c20',
     borderWidth: 1.2,
-    borderColor: 'rgba(0, 240, 255, 0.4)',
+    borderColor: 'rgba(135, 123, 244, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -1441,7 +1441,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheetContainer: {
-    backgroundColor: '#0c1214',
+    backgroundColor: '#1a1c20',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderTopWidth: 1.5,

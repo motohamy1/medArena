@@ -179,7 +179,7 @@ export default function CategoryPage() {
 
       {/* Live Search Bar */}
       <View className="px-5 pt-3 pb-2 bg-background">
-        <View className="bg-[#121719] rounded-2xl flex-row items-center px-4 py-2.5 border border-white/10">
+        <View className="bg-[#23262b] rounded-2xl flex-row items-center px-4 py-2.5 border border-white/10">
           <Ionicons name="search" size={18} color={specialty.color} />
           <TextInput
             className="flex-1 text-white ml-2.5 font-sans-medium text-sm"
@@ -207,13 +207,13 @@ export default function CategoryPage() {
                   onPress={() => setSelectedFilter(chip)}
                   className="px-3 py-1 rounded-full border flex-shrink-0"
                   style={{
-                    backgroundColor: isSelected ? `${specialty.color}25` : '#121719',
+                    backgroundColor: isSelected ? `${specialty.color}25` : '#23262b',
                     borderColor: isSelected ? specialty.color : 'rgba(255,255,255,0.08)',
                   }}
                 >
                   <Text
                     className="text-[11px] font-sans-bold capitalize"
-                    style={{ color: isSelected ? specialty.color : '#9e9e9e', includeFontPadding: false }}
+                    style={{ color: isSelected ? specialty.color : '#8c92a0', includeFontPadding: false }}
                   >
                     {chip === 'all' ? 'All Types' : chip}
                   </Text>
@@ -242,7 +242,7 @@ export default function CategoryPage() {
           </Text>
 
           {filteredTopics.length === 0 ? (
-            <View className="items-center justify-center py-10 px-4 bg-[#121719] rounded-3xl border border-white/5 mt-2">
+            <View className="items-center justify-center py-10 px-4 bg-[#23262b] rounded-3xl border border-white/5 mt-2">
                <Ionicons name="document-text-outline" size={44} color={specialty.color} />
                <Text className="text-white font-sans-bold text-base mt-3 text-center">
                  {searchText.trim() ? `No topic matching "${searchText}"` : 'No curated topics in this filter'}
@@ -290,7 +290,7 @@ export default function CategoryPage() {
                   style={[styles.topicCardTouchable, { borderColor: `${specialty.color}40` }]}
                 >
                   <LinearGradient
-                    colors={[`${specialty.color}22`, `${specialty.color}08`, '#0d1316']}
+                    colors={[`${specialty.color}22`, `${specialty.color}08`, '#1a1c20']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.topicCardGradient}
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   primaryActionBtnText: {
-    color: '#010101',
+    color: '#08090b',
     fontFamily: 'PlexSans_700Bold',
     fontSize: 12.5,
     fontWeight: '700',
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   topicSubtitle: {
-    color: '#cbd5e1',
+    color: '#ccd1dc',
     fontFamily: 'PlexSans_400Regular',
     fontSize: 11.5,
     lineHeight: 16,
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   floatingText: {
-    color: '#010101',
+    color: '#08090b',
     fontFamily: 'PlexSans_700Bold',
     fontSize: 13.5,
     fontWeight: '700',

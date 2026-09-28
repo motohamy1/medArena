@@ -77,20 +77,20 @@ type Proposal = {
 };
 
 const SPECIALTIES = [
-  { id: 'pulmonology', name: 'Pulmonology', icon: 'fitness-outline', color: '#4bc0b8' },
-  { id: 'heart', name: 'Cardiology', icon: 'heart-outline', color: '#f9bac9' },
-  { id: 'git', name: 'Gastroenterology', icon: 'restaurant-outline', color: '#a9e4e8' },
-  { id: 'neuro', name: 'Neurology', icon: 'git-network-outline', color: '#cbc8f5' },
-  { id: 'nephrology', name: 'Nephrology', icon: 'water-outline', color: '#a9e4e8' },
-  { id: 'endocrinology', name: 'Endocrinology', icon: 'speedometer-outline', color: '#f9bac9' },
-  { id: 'critical_care', name: 'Critical Care / ICU', icon: 'medkit-outline', color: '#4bc0b8' },
-  { id: 'pediatrics', name: 'Pediatrics', icon: 'happy-outline', color: '#a9e4e8' },
-  { id: 'hematology_oncology', name: 'Heme-Onc', icon: 'shield-outline', color: '#cbc8f5' },
-  { id: 'rheumatology', name: 'Rheumatology', icon: 'body-outline', color: '#f9bac9' },
-  { id: 'psychiatry', name: 'Psychiatry', icon: 'sparkles-outline', color: '#4bc0b8' },
-  { id: 'ophthalmology', name: 'Ophthalmology', icon: 'eye-outline', color: '#cbc8f5' },
-  { id: 'dermatology', name: 'Dermatology', icon: 'bandage-outline', color: '#f9bac9' },
-  { id: 'surgical_suite', name: 'Surgical Suite', icon: 'cut-outline', color: '#4bc0b8' },
+  { id: 'pulmonology', name: 'Pulmonology', icon: 'fitness-outline', color: '#877bf4' },
+  { id: 'heart', name: 'Cardiology', icon: 'heart-outline', color: '#eb988a' },
+  { id: 'git', name: 'Gastroenterology', icon: 'restaurant-outline', color: '#f05c4a' },
+  { id: 'neuro', name: 'Neurology', icon: 'git-network-outline', color: '#b0afeb' },
+  { id: 'nephrology', name: 'Nephrology', icon: 'water-outline', color: '#f05c4a' },
+  { id: 'endocrinology', name: 'Endocrinology', icon: 'speedometer-outline', color: '#eb988a' },
+  { id: 'critical_care', name: 'Critical Care / ICU', icon: 'medkit-outline', color: '#877bf4' },
+  { id: 'pediatrics', name: 'Pediatrics', icon: 'happy-outline', color: '#f05c4a' },
+  { id: 'hematology_oncology', name: 'Heme-Onc', icon: 'shield-outline', color: '#b0afeb' },
+  { id: 'rheumatology', name: 'Rheumatology', icon: 'body-outline', color: '#eb988a' },
+  { id: 'psychiatry', name: 'Psychiatry', icon: 'sparkles-outline', color: '#877bf4' },
+  { id: 'ophthalmology', name: 'Ophthalmology', icon: 'eye-outline', color: '#b0afeb' },
+  { id: 'dermatology', name: 'Dermatology', icon: 'bandage-outline', color: '#eb988a' },
+  { id: 'surgical_suite', name: 'Surgical Suite', icon: 'cut-outline', color: '#877bf4' },
 ];
 
 export default function ReviewQueue() {
@@ -365,12 +365,12 @@ export default function ReviewQueue() {
 
   const getStatusColor = (st: string) => {
     switch (st) {
-      case 'running': return '#10b981'; // emerald
+      case 'running': return '#4d9960'; // emerald
       case 'brainstorming': return Colors.accent; // cyan/mint
-      case 'paused': return '#f59e0b'; // amber
-      case 'stopped': return '#ef4444'; // red
-      case 'completed': return '#10b981';
-      default: return '#6b7280'; // gray
+      case 'paused': return '#b0890e'; // amber
+      case 'stopped': return '#f05c4a'; // red
+      case 'completed': return '#4d9960';
+      default: return '#6f7580'; // gray
     }
   };
 
@@ -422,7 +422,7 @@ export default function ReviewQueue() {
               fetchMissionStatus();
               fetchProposals();
             }}
-            tintColor="#a9e4e8"
+            tintColor="#f05c4a"
           />
         }
       >
@@ -538,7 +538,7 @@ export default function ReviewQueue() {
                         disabled={isActionLoading}
                         className="flex-1 bg-amber-500/20 border border-amber-500/40 h-11 rounded-xl flex-row items-center justify-center gap-2"
                       >
-                        <Ionicons name="pause" size={18} color="#f59e0b" />
+                        <Ionicons name="pause" size={18} color="#b0890e" />
                         <Text className="text-amber-400 font-sans-bold text-xs">Pause</Text>
                       </TouchableOpacity>
                     )}
@@ -559,7 +559,7 @@ export default function ReviewQueue() {
                       disabled={isActionLoading}
                       className="px-3.5 h-11 bg-red-500/20 border border-red-500/40 rounded-xl flex-row items-center justify-center gap-1.5"
                     >
-                      <Ionicons name="stop" size={16} color="#ef4444" />
+                      <Ionicons name="stop" size={16} color="#f05c4a" />
                       <Text className="text-red-400 font-sans-bold text-xs">Stop</Text>
                     </TouchableOpacity>
                   </>
@@ -670,17 +670,17 @@ export default function ReviewQueue() {
 
               {/* Search Bar */}
               <View className="bg-background/60 rounded-xl px-3 py-2 flex-row items-center gap-2 border border-white/10 mb-3">
-                <Ionicons name="search" size={16} color="#7b8188" />
+                <Ionicons name="search" size={16} color="#8c92a0" />
                 <TextInput
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholder="Filter topics in queue..."
-                  placeholderTextColor="#7b8188"
+                  placeholderTextColor="#6f7580"
                   className="flex-1 text-white text-xs"
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={16} color="#7b8188" />
+                    <Ionicons name="close-circle" size={16} color="#8c92a0" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -717,7 +717,7 @@ export default function ReviewQueue() {
               {/* Queue Items List */}
               {filteredQueue.length === 0 ? (
                 <View className="py-8 items-center">
-                  <Ionicons name="file-tray-outline" size={32} color="#7b8188" />
+                  <Ionicons name="file-tray-outline" size={32} color="#8c92a0" />
                   <Text className="text-xs text-gray-muted mt-2">No topics found in this view.</Text>
                 </View>
               ) : (
@@ -785,7 +785,7 @@ export default function ReviewQueue() {
 
                           {isItemDone && (
                             <View className="bg-emerald-500/20 p-1.5 rounded-lg">
-                              <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                              <Ionicons name="checkmark-circle" size={16} color="#4d9960" />
                             </View>
                           )}
 
@@ -801,7 +801,7 @@ export default function ReviewQueue() {
                                 onPress={() => handleRemoveTopic(item.id)}
                                 className="p-1 rounded-md"
                               >
-                                <Ionicons name="trash-outline" size={14} color="#7b8188" />
+                                <Ionicons name="trash-outline" size={14} color="#8c92a0" />
                               </TouchableOpacity>
                             </>
                           )}
@@ -841,7 +841,7 @@ export default function ReviewQueue() {
                 <Ionicons
                   name={showTerminal ? 'chevron-up' : 'chevron-down'}
                   size={16}
-                  color="#7b8188"
+                  color="#8c92a0"
                 />
               </TouchableOpacity>
 
@@ -850,10 +850,10 @@ export default function ReviewQueue() {
                   <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
                     {missionState.logs && missionState.logs.length > 0 ? (
                       missionState.logs.map(log => {
-                        let logColor = '#e5e7eb';
-                        if (log.type === 'success') logColor = '#34d399';
-                        if (log.type === 'warn') logColor = '#fbbf24';
-                        if (log.type === 'error') logColor = '#f87171';
+                        let logColor = '#ccd1dc';
+                        if (log.type === 'success') logColor = '#4d9960';
+                        if (log.type === 'warn') logColor = '#f6c53c';
+                        if (log.type === 'error') logColor = '#eb988a';
                         if (log.type === 'step') logColor = '#67e8f9';
 
                         return (
@@ -962,7 +962,7 @@ export default function ReviewQueue() {
                       disabled={!!processingId}
                       className="w-11 h-10 bg-red-500/20 rounded-xl items-center justify-center border border-red-500/30"
                     >
-                      <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                      <Ionicons name="trash-outline" size={16} color="#f05c4a" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -993,7 +993,7 @@ export default function ReviewQueue() {
               value={newTopicTitle}
               onChangeText={setNewTopicTitle}
               placeholder="e.g. Acute Severe Asthma Exacerbation"
-              placeholderTextColor="#7b8188"
+              placeholderTextColor="#6f7580"
               className="bg-background/80 border border-white/10 rounded-xl p-3 text-white text-xs mb-4"
             />
 
@@ -1049,7 +1049,7 @@ export default function ReviewQueue() {
 const styles = StyleSheet.create({
   center: {
     flex: 1,
-    backgroundColor: '#010101',
+    backgroundColor: '#08090b',
     alignItems: 'center',
     justifyContent: 'center'
   }

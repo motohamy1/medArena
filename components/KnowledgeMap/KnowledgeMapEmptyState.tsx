@@ -29,7 +29,7 @@ export const KnowledgeMapEmptyState: React.FC<KnowledgeMapEmptyStateProps> = ({
           onPress={onAskAi}
           activeOpacity={0.8}
         >
-          <Ionicons name="chatbubbles" size={15} color="#010101" />
+          <Ionicons name="chatbubbles" size={15} color="#08090b" />
           <Text style={styles.buttonText}>Ask AI</Text>
         </TouchableOpacity>
       )}
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
-    backgroundColor: '#010101',
+    backgroundColor: '#08090b',
   },
   iconContainer: {
     width: 64,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 13,
     fontFamily: 'PlexSans_400Regular',
-    color: '#94a3b8',
+    color: '#8c92a0',
     textAlign: 'center',
     lineHeight: 19,
     marginBottom: 20,
@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 13,
     fontFamily: 'PlexSans_700Bold',
-    color: '#010101',
+    color: '#08090b',
   },
 });

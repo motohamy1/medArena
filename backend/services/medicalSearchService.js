@@ -34,50 +34,85 @@ async function fetchMedicalKnowledge(query) {
     }
 }
 
-// Shared tokenization for relevance checks.
-function getQueryTokens(queryKeywords) {
-    const stopWords = new Set(['and', 'the', 'for', 'with', 'under', 'over', 'from', 'what', 'how', 'when', 'which', 'latest', 'recent', 'only', 'guideline', 'guidelines']);
-    return String(queryKeywords || '')
+const SEARCH_STOP_WORDS = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'been', 'but', 'by', 'can', 'could',
+    'do', 'does', 'for', 'from', 'has', 'have', 'how', 'i', 'if', 'in', 'is', 'it',
+    'may', 'me', 'more', 'my', 'of', 'on', 'or', 'please', 'should', 'that', 'the',
+    'their', 'them', 'there', 'this', 'to', 'was', 'we', 'what', 'when', 'where',
+    'which', 'who', 'why', 'will', 'with', 'you', 'latest', 'recent', 'only',
+    'guideline', 'guidelines', 'treatment', 'treatments', 'manage', 'management',
+    'recommendation', 'recommendations', 'recommended', 'diagnostic', 'diagnosis',
+    'criteria', 'criterion', 'workup', 'evaluation', 'evaluate', 'patient', 'patients',
+    'adult', 'adults', 'current', 'best', 'first', 'line', 'dose', 'dosage', 'safe',
+    'safety', 'explain', 'tell', 'use', 'used', 'using', 'العلاج', 'علاج', 'جرعة',
+    'الجرعة', 'معايير', 'تشخيص', 'التشخيص', 'فحوصات', 'فحص', 'اعراض', 'أعراض', 'ماهي',
+    'ماهو', 'ايه', 'إيه', 'هل', 'من', 'في', 'على', 'عن', 'مع', 'الى', 'إلى', 'لو',
+    'ممكن', 'عايز', 'عايزة', 'اعرف', 'أعرف', 'اللي', 'هي', 'هو', 'كان', 'كانت',
+    'مريض', 'مريضة', 'المريض', 'المريضة', 'عنده', 'عندها', 'حالة', 'افضل', 'أفضل',
+    'احسن', 'أحسن', 'دلوقتي', 'طب', 'طيب', 'يا', 'دكتور', 'محتاج', 'محتاجه', 'حاليا',
+    'حالياً', 'الموصى', 'الموصي', 'دا', 'ده', 'دي', 'ذلك', 'هذه', 'هذا',
+]);
+
+const SHORT_CLINICAL_TOKENS = new Set(['bp', 'dm', 'ckd', 'aki', 'dka', 'cap', 'uti', 'ccb', 'ccp', 'hb']);
+
+function normalizeSearchText(text) {
+    return String(text || '')
+        .normalize('NFKC')
         .toLowerCase()
-        .replace(/[^\w\s-]/g, ' ')
-        .split(/\s+/)
-        .filter(t => t.length > 2 && !stopWords.has(t) && !/^\d+$/.test(t));
+        .normalize('NFD')
+        .replace(/\p{M}/gu, '')
+        .replace(/[أإآٱ]/gu, 'ا')
+        .replace(/ى/gu, 'ي')
+        .replace(/ـ/gu, '')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim();
 }
 
-// Token-overlap relevance in [0,1]. The denominator is capped so long clinical
-// questions don't dilute scores below usable thresholds; an irrelevant record
-// scores ~0 while a focused one scores high.
+// Unicode-aware tokenization preserves Arabic concepts. Intent and filler
+// words are excluded so generic overlap cannot masquerade as disease relevance.
+function getQueryTokens(queryKeywords) {
+    const tokens = normalizeSearchText(queryKeywords).split(/\s+/u).filter(Boolean);
+    return [...new Set(tokens.filter((token) =>
+        (token.length > 2 || SHORT_CLINICAL_TOKENS.has(token))
+        && !SEARCH_STOP_WORDS.has(token)
+        && !/^\p{N}+$/u.test(token)
+    ))];
+}
+
+function tokenMatches(token, evidenceTokens) {
+    if (token === 'pylori' || token === 'helicobacter') return evidenceTokens.has('pylori') || evidenceTokens.has('helicobacter');
+    if (token.startsWith('child') || token.startsWith('pediatr')) {
+        return ['child', 'children', 'pediatric', 'paediatric', 'adolescent'].some((variant) => evidenceTokens.has(variant));
+    }
+    if (token.endsWith('s') && evidenceTokens.has(token.slice(0, -1))) return true;
+    return evidenceTokens.has(token);
+}
+
+// Token-overlap relevance in [0,1]. An unparseable/empty query has zero
+// relevance, never a positive neutral prior.
 function computeRelevance(text, tokens) {
-    if (!tokens.length) return 0.6;
-    const combined = String(text || '').toLowerCase();
-    const matches = tokens.filter(tok => {
-        if (tok === 'pylori' || tok === 'helicobacter') return combined.includes('pylori') || combined.includes('helicobacter');
-        if (tok.startsWith('child') || tok.startsWith('pediatr')) return combined.includes('child') || combined.includes('pediatr') || combined.includes('adolesc');
-        return combined.includes(tok);
-    });
-    return Number(Math.min(1, matches.length / Math.min(tokens.length, 6)).toFixed(4));
+    const queryTokens = [...new Set((Array.isArray(tokens) ? tokens : []).filter(Boolean))];
+    if (!queryTokens.length) return 0;
+    const evidenceTokens = new Set(normalizeSearchText(text).split(/\s+/u).filter(Boolean));
+    const matches = queryTokens.filter((token) => tokenMatches(token, evidenceTokens));
+    return Number(Math.min(1, matches.length / Math.min(queryTokens.length, 6)).toFixed(4));
 }
 
 function isRelevantLiterature(ref, queryKeywords) {
     if (!ref || !ref.title) return false;
-    const combinedText = `${ref.title} ${ref.abstract || ''}`.toLowerCase();
     const tokens = getQueryTokens(queryKeywords);
-
-    if (tokens.length === 0) return true;
-
-    // Check if at least one key disease/concept token matches the title or abstract
-    const matches = tokens.filter(tok => {
-        // Handle variations like pylori -> pylori/pyloridis, child -> child/children/pediatric
-        if (tok === 'pylori' || tok === 'helicobacter') return combinedText.includes('pylori') || combinedText.includes('helicobacter');
-        if (tok.startsWith('child') || tok.startsWith('pediatr')) return combinedText.includes('child') || combinedText.includes('pediatr') || combinedText.includes('adolesc');
-        return combinedText.includes(tok);
-    });
-
-    return matches.length >= Math.min(2, tokens.length);
+    if (!tokens.length) return false;
+    const relevance = computeRelevance(`${ref.title} ${ref.abstract || ''}`, tokens);
+    // A single specific anchor is enough; multi-concept queries require at
+    // least two matching concepts, not just a common generic word.
+    return relevance >= (tokens.length === 1 ? 1 : 0.55);
 }
 
 async function fetchClinicalLiterature(query, specialtyId, options = {}) {
-    const { broad = false, includeTrials = true, includeFda = true } = options;
+    const { broad = false, includeTrials = true, includeFda = true, signal } = options;
+    const throwIfAborted = () => {
+        if (signal?.aborted) throw Object.assign(new Error('Evidence source request aborted at request deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
+    };
     // Structured failures (spec §95): every network/parse problem is recorded
     // with a code — never swallowed into a silent []. Declared outside the try
     // so the outer catch can still report the aggregate failure. Legacy
@@ -94,6 +129,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
         const fetchPMC = async (isRecentOnly = false) => {
             const cleanQuery = query.replace(/[()]/g, ' ').trim();
             const tokens = getQueryTokens(cleanQuery);
+            if (!tokens.length) return [];
             const currentYear = new Date().getFullYear();
             const yearFilter = isRecentOnly && !broad ? ` AND (PUB_YEAR:[${currentYear - 2} TO ${currentYear}])` : '';
             const evidenceSuffix = evidenceFilter ? ` AND ${evidenceFilter}` : '';
@@ -119,6 +155,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
             ].filter(Boolean);
 
             for (const enhancedQuery of variants) {
+                throwIfAborted();
                 try {
                     const url = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
                     url.searchParams.append('query', enhancedQuery);
@@ -130,7 +167,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                     // tangential full-text matches. Recency intent is enforced by the
                     // PUB_YEAR filter instead. An invalid sort value also makes the API
                     // return a version-only stub.
-                    const response = await fetch(url.toString());
+                    const response = await fetch(url.toString(), { signal });
                     if (!response.ok) { failures.push({ component: 'europe_pmc', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); continue; }
                     const data = await response.json();
                     let results = data.resultList?.result || [];
@@ -142,7 +179,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                         retryUrl.searchParams.append('format', 'json');
                         retryUrl.searchParams.append('resultType', 'core');
                         retryUrl.searchParams.append('pageSize', '4');
-                        const retryResponse = await fetch(retryUrl.toString());
+                        const retryResponse = await fetch(retryUrl.toString(), { signal });
                         if (!retryResponse.ok) continue;
                         const retryData = await retryResponse.json();
                         results = retryData.resultList?.result || [];
@@ -163,7 +200,11 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                         };
                     }).filter(r => r.abstract && isRelevantLiterature(r, cleanQuery));
                     if (items.length) return items;
-                } catch (error) { failures.push({ component: 'europe_pmc', code: 'NETWORK_ERROR', message: error.message }); continue; }
+                } catch (error) {
+                    if (signal?.aborted || error?.name === 'AbortError') throw Object.assign(new Error('Europe PMC request aborted at request deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
+                    failures.push({ component: 'europe_pmc', code: 'NETWORK_ERROR', message: error.message });
+                    continue;
+                }
             }
             return [];
         };
@@ -173,12 +214,13 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
             try {
                 const cleanQuery = query.replace(/[()]/g, ' ').trim();
                 const tokens = getQueryTokens(cleanQuery);
+                if (!tokens.length) return [];
                 const url = new URL('https://clinicaltrials.gov/api/v2/studies');
                 url.searchParams.append('query.cond', cleanQuery);
                 url.searchParams.append('pageSize', '2');
                 url.searchParams.append('sort', 'LastUpdatePostDate:desc'); // Get latest
 
-                const response = await fetch(url.toString());
+                const response = await fetch(url.toString(), { signal });
                 if (!response.ok) { failures.push({ component: 'clinicaltrials_gov', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); return []; }
                 const data = await response.json();
                 const studies = data.studies || [];
@@ -200,7 +242,11 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                         relevance_score: computeRelevance(`${title} ${abstract}`, tokens),
                     };
                 }).filter(r => isRelevantLiterature(r, cleanQuery));
-            } catch (error) { failures.push({ component: 'clinicaltrials_gov', code: 'NETWORK_ERROR', message: error.message }); return []; }
+            } catch (error) {
+                if (signal?.aborted || error?.name === 'AbortError') throw Object.assign(new Error('ClinicalTrials.gov request aborted at request deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
+                failures.push({ component: 'clinicaltrials_gov', code: 'NETWORK_ERROR', message: error.message });
+                return [];
+            }
         };
 
         // 3. OpenFDA (Drug labels, warnings)
@@ -208,6 +254,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
             try {
                 const cleanQuery = query.replace(/[()]/g, ' ').trim();
                 const tokens = getQueryTokens(cleanQuery);
+                if (!tokens.length) return [];
                 // openFDA phrase-searches fail on long natural-language queries;
                 // AND the top discriminating tokens instead (spec §16 expansion).
                 const focus = tokens.slice(0, 3);
@@ -216,7 +263,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                 url.searchParams.append('search', `indications_and_usage:${termQuery} OR generic_name:${termQuery}`);
                 url.searchParams.append('limit', '1');
 
-                const response = await fetch(url.toString());
+                const response = await fetch(url.toString(), { signal });
                 if (!response.ok) { failures.push({ component: 'fda', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); return []; }
                 const data = await response.json();
                 const results = data.results || [];
@@ -235,7 +282,11 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                         relevance_score: computeRelevance(`${r.openfda?.brand_name?.[0] || ''} ${r.openfda?.generic_name?.[0] || ''} ${abstract}`, tokens),
                     };
                 }).filter(r => isRelevantLiterature(r, cleanQuery));
-            } catch (error) { failures.push({ component: 'fda', code: 'NETWORK_ERROR', message: error.message }); return []; }
+            } catch (error) {
+                if (signal?.aborted || error?.name === 'AbortError') throw Object.assign(new Error('OpenFDA request aborted at request deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
+                failures.push({ component: 'fda', code: 'NETWORK_ERROR', message: error.message });
+                return [];
+            }
         };
 
         const tasks = [fetchPMC(true), fetchPMC(false)];
@@ -247,6 +298,7 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
         const allRefs = [...pmcLatest, ...pmcFoundational, ...trials, ...fda];
         return { items: allRefs.slice(0, 6), failures }; // Limit total context size
     } catch (error) {
+        if (signal?.aborted || error?.name === 'AbortError') throw Object.assign(new Error('Medical literature request aborted at request deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
         failures.push({ component: 'aggregate', code: 'NETWORK_ERROR', message: error.message });
         return { items: [], failures };
     }
@@ -276,4 +328,5 @@ module.exports = {
     fetchClinicalLiteratureStrict,
     getQueryTokens,
     computeRelevance,
+    isRelevantLiterature,
 };

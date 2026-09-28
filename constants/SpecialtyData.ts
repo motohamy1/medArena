@@ -51,7 +51,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Heart',
     scientificName: 'Cardiology',
     icon: 'heart',
-    color: '#ffc3dd',
+    color: '#eb988a',
     illustration: require('../assets/images/specialties/cardiology.jpg'),
     generalScope: 'Focus exclusively on cardiovascular pathology, acute coronary syndromes, heart failure, arrhythmias, vascular emergencies, and evidence-based interventions.',
     categories: [
@@ -274,7 +274,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'GIT',
     scientificName: 'Gastroenterology & Hepatology',
     icon: 'restaurant',
-    color: '#defff9',
+    color: '#f6dda2',
     illustration: require('../assets/images/specialties/gastroenterology.jpg'),
     generalScope: 'Focus exclusively on the gastrointestinal tract, luminal disorders, hepatobiliary tree, pancreatitis, endoscopy, and liver cirrhosis.',
     categories: [
@@ -431,7 +431,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Fever',
     scientificName: 'Infectious Disease & Critical Care',
     icon: 'thermometer',
-    color: '#6dc2bd',
+    color: '#877bf4',
     illustration: require('../assets/images/specialties/infectious.jpg'),
     generalScope: 'Focus exclusively on severe systemic infections, sepsis, febrile illnesses, antibacterial stewardship, critical care resuscitation, and multi-drug resistance.',
     categories: [
@@ -588,7 +588,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Neuro',
     scientificName: 'Neurology & Neurocritical Care',
     icon: 'pulse',
-    color: '#dbd4fd',
+    color: '#b0afeb',
     illustration: require('../assets/images/specialties/neurology.jpg'),
     generalScope: 'Focus exclusively on central and peripheral nervous system pathology, ischemic and hemorrhagic stroke, status epilepticus, neuromuscular emergencies, and neuroimaging.',
     categories: [
@@ -744,7 +744,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Skin',
     scientificName: 'Dermatology & Cutaneous Medicine',
     icon: 'body',
-    color: '#ffc3dd',
+    color: '#eb988a',
     illustration: require('../assets/images/specialties/dermatology.jpg'),
     generalScope: 'Focus exclusively on dermatologic diseases, severe cutaneous adverse reactions, inflammatory dermatoses, skin oncology, and dermoscopy.',
     categories: [
@@ -932,7 +932,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Gynacology',
     scientificName: 'OB/GYN',
     icon: 'woman',
-    color: '#dbd4fd',
+    color: '#b0afeb',
     illustration: require('../assets/images/specialties/gynecology.jpg'),
     generalScope: 'Focus exclusively on obstetric emergencies, hypertensive pregnancy disorders, intrapartum fetal monitoring, gynecologic oncology, and reproductive endocrinology.',
     categories: [
@@ -1088,7 +1088,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Lungs',
     scientificName: 'Pulmonology & Respiratory Medicine',
     icon: 'leaf',
-    color: '#6dc2bd',
+    color: '#877bf4',
     illustration: require('../assets/images/specialties/pulmonology.jpg'),
     generalScope: 'Focus exclusively on respiratory pathology, pulmonary embolism, ARDS, mechanical ventilation, asthma, COPD, and thoracic interventions.',
     categories: [
@@ -1244,7 +1244,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Surgery',
     scientificName: 'General Surgery & Operative Suite',
     icon: 'cut',
-    color: '#ffc3dd',
+    color: '#eb988a',
     illustration: require('../assets/images/specialties/surgery.jpg'),
     generalScope: 'Comprehensive operative surgery reference: acute surgical abdomen, step-by-step operative techniques, energy platforms, surgical instruments, ERAS protocols, damage control resuscitation, and perioperative surgical clearance.',
     categories: [
@@ -1560,7 +1560,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Renal',
     scientificName: 'Nephrology & Renal Medicine',
     icon: 'water',
-    color: '#defff9',
+    color: '#f6dda2',
     illustration: require('../assets/images/specialties/nephrology.jpg'),
     generalScope: 'Focus on acute kidney injury staging, dialysis indications, glomerular diseases, fluid/electrolyte management, and severe hyperkalemia.',
     categories: [
@@ -1620,7 +1620,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Endo',
     scientificName: 'Endocrinology & Metabolism',
     icon: 'speedometer',
-    color: '#ffc3dd',
+    color: '#eb988a',
     illustration: require('../assets/images/specialties/endocrinology.jpg'),
     generalScope: 'Focus on diabetic ketoacidosis (DKA), hyperosmolar hyperglycemic state (HHS), thyroid storm, adrenal crisis, and inpatient glycemic protocols.',
     categories: [
@@ -1656,7 +1656,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'ICU',
     scientificName: 'Emergency & Critical Care Medicine',
     icon: 'medkit',
-    color: '#6dc2bd',
+    color: '#877bf4',
     illustration: require('../assets/images/specialties/critical_care.jpg'),
     generalScope: 'Focus on undifferentiated shock, mechanical ventilation in ARDS, rapid sequence intubation (RSI) in shock, and vasoactive drug titration.',
     categories: [
@@ -1692,7 +1692,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Heme-Onc',
     scientificName: 'Hematology & Medical Oncology',
     icon: 'fitness',
-    color: '#dbd4fd',
+    color: '#b0afeb',
     illustration: require('../assets/images/specialties/hematology_oncology.jpg'),
     generalScope: 'Focus on febrile neutropenia, tumor lysis syndrome, sickle cell vaso-occlusive crisis, and heparin-induced thrombocytopenia.',
     categories: [
@@ -1728,7 +1728,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Rheum',
     scientificName: 'Rheumatology & Autoimmune Diseases',
     icon: 'body',
-    color: '#ffc3dd',
+    color: '#eb988a',
     illustration: require('../assets/images/specialties/rheumatology.jpg'),
     generalScope: 'Focus on autoimmune connective tissue diseases, inflammatory arthritis, lupus flares, and giant cell arteritis.',
     categories: [
@@ -1764,7 +1764,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Peds',
     scientificName: 'Pediatrics & Neonatal Care',
     icon: 'happy',
-    color: '#defff9',
+    color: '#f6dda2',
     illustration: require('../assets/images/specialties/pediatrics.jpg'),
     generalScope: 'Focus on pediatric emergency resuscitation, febrile infants <60 days, croup, bronchiolitis, and weight-based fluid dosing.',
     categories: [
@@ -1800,7 +1800,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Psych',
     scientificName: 'Psychiatry & Behavioral Health',
     icon: 'sparkles',
-    color: '#6dc2bd',
+    color: '#877bf4',
     illustration: require('../assets/images/specialties/psychiatry.jpg'),
     generalScope: 'Focus on acute agitation de-escalation, rapid chemical tranquilization, serotonin syndrome, neuroleptic malignant syndrome, and CIWA-Ar.',
     categories: [
@@ -1835,7 +1835,7 @@ export const SPECIALTY_KNOWLEDGE: Record<string, SpecialtyData> = {
     name: 'Eyes',
     scientificName: 'Ophthalmology & Visual Sciences',
     icon: 'eye',
-    color: '#dbd4fd',
+    color: '#b0afeb',
     illustration: require('../assets/images/specialties/neurology.jpg'),
     generalScope: 'Comprehensive ophthalmic triage, acute vision loss, elevated intraocular pressure, retinal emergencies, and corneal trauma.',
     categories: [
@@ -2032,7 +2032,7 @@ export function getSpecialtyKnowledge(id: string): SpecialtyData {
     name: formattedName,
     scientificName: `${formattedName} Medicine`,
     icon: 'medkit',
-    color: '#6dc2bd',
+    color: '#877bf4',
     illustration: require('../assets/images/specialties/cardiology.jpg'),
     generalScope: `Comprehensive clinical guidelines, emergency protocols, and diagnostic management for ${formattedName}.`,
     categories: [
