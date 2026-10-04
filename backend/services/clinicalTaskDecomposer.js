@@ -138,15 +138,29 @@ function buildTaskQueries(task, query) {
             for (const entity of entities) push(`${condition || 'hypertension'} guideline ${entity}`.trim());
             break;
         case 'dose_determination':
-            for (const drug of query.medications.length ? query.medications : entities) push(`${drug} dose administration`);
+            const detDrugs = (query.medications && query.medications.length) ? query.medications : entities;
+            for (const drug of detDrugs) {
+                push(`${drug} dose administration`);
+                if (condition) push(`${drug} ${condition} dose`);
+            }
             if (query.search_terms?.includes('vitamin')) push(`${condition} vitamin deficiency supplementation guideline`);
             push(`${query.condition || ''} drug dose`.trim());
             break;
         case 'dose_modifiers':
-            for (const drug of query.medications.length ? query.medications : entities) push(`${drug} renal dose adjustment`);
+            const modDrugs = (query.medications && query.medications.length) ? query.medications : (entities.length ? entities : (condition ? [condition] : []));
+            for (const drug of modDrugs) {
+                push(`${drug} renal dose adjustment`);
+                if (query.patient?.age?.value != null || query.patient?.age?.range || query.population?.age != null) {
+                    push(`${drug} pediatric dose`);
+                }
+                if (query.patient?.weight_kg != null || query.population?.weight != null) {
+                    push(`${drug} weight dosing`);
+                }
+            }
             break;
         case 'dose_safety':
-            for (const drug of query.medications.length ? query.medications : entities) push(`${drug} contraindications warnings`);
+            const safeDrugs = (query.medications && query.medications.length) ? query.medications : (entities.length ? entities : (condition ? [condition] : []));
+            for (const drug of safeDrugs) push(`${drug} contraindications warnings`);
             break;
         case 'diagnostic_criteria':
             push(`${condition} diagnostic criteria guideline`);

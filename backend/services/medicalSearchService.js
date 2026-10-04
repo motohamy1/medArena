@@ -48,9 +48,14 @@ const SEARCH_STOP_WORDS = new Set([
     'الجرعة', 'معايير', 'تشخيص', 'التشخيص', 'فحوصات', 'فحص', 'اعراض', 'أعراض', 'ماهي',
     'ماهو', 'ايه', 'إيه', 'هل', 'من', 'في', 'على', 'عن', 'مع', 'الى', 'إلى', 'لو',
     'ممكن', 'عايز', 'عايزة', 'اعرف', 'أعرف', 'اللي', 'هي', 'هو', 'كان', 'كانت',
-    'مريض', 'مريضة', 'المريض', 'المريضة', 'عنده', 'عندها', 'حالة', 'افضل', 'أفضل',
+    'مريض', 'مريضة', 'المريض', 'المريضة', 'عنده', 'عندها', 'حالة', 'الحالة', 'افضل', 'أفضل',
     'احسن', 'أحسن', 'دلوقتي', 'طب', 'طيب', 'يا', 'دكتور', 'محتاج', 'محتاجه', 'حاليا',
     'حالياً', 'الموصى', 'الموصي', 'دا', 'ده', 'دي', 'ذلك', 'هذه', 'هذا',
+    'عيان', 'عيانة', 'العيان', 'العيانة', 'سنة', 'سنين', 'سنتين', 'سنوات', 'طفل', 'طفلة',
+    'الطفل', 'الطفلة', 'أطفال', 'اطفال', 'بتاع', 'بتاعة', 'بتاعت', 'بتاعته', 'بتاعتها',
+    'ازاي', 'إزاي', 'علشان', 'عشان', 'ينفع', 'ينفعش', 'اديله', 'اديه', 'اديها', 'نعطيه',
+    'اعطيه', 'اديتله', 'معلش', 'شكرا', 'سمحت', 'بروتوكول', 'الاول', 'الأول', 'ان', 'أن',
+    'إن', 'انه', 'إنها', 'انها', 'ماشي', 'ماشيين', 'بياخد', 'تاخد', 'بتاخد', 'لو سمحت',
 ]);
 
 const SHORT_CLINICAL_TOKENS = new Set(['bp', 'dm', 'ckd', 'aki', 'dka', 'cap', 'uti', 'ccb', 'ccp', 'hb']);
@@ -140,18 +145,11 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
             // progressively broader formulations until the relevance gate passes.
             const variants = broad ? [
                 `(${cleanQuery})${categoryFilter}`,
-                `(${core.slice(0, 6).join(' ')})${categoryFilter}`,
-                `(${core.slice(0, 3).join(' ')})${categoryFilter}`,
+                `(${core.slice(0, 5).join(' ')})${categoryFilter}`,
             ] : [
-                `(${cleanQuery})${categoryFilter}${evidenceSuffix}${yearFilter}`,
                 `(${cleanQuery})${categoryFilter}${evidenceSuffix}`,
                 `(${cleanQuery})${categoryFilter}`,
-                `(${core.slice(0, 6).join(' ')})${categoryFilter}`,
-                // OR-relaxation (spec §16): multi-concept AND-queries zero out
-                // ("criteria AND workup AND pancreatitis AND acute"); anchor on
-                // the primary concept and OR the secondary concepts.
-                core.length >= 3 ? `(${core[0]})${categoryFilter} AND (${core.slice(1, 5).map((token) => `"${token}"`).join(' OR ')})` : null,
-                `(${core.slice(0, 3).join(' ')})${categoryFilter}`,
+                `(${core.slice(0, 5).join(' ')})${categoryFilter}`,
             ].filter(Boolean);
 
             for (const enhancedQuery of variants) {
@@ -162,16 +160,11 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                     url.searchParams.append('format', 'json');
                     url.searchParams.append('resultType', 'core');
                     url.searchParams.append('pageSize', '4');
-                    // Europe PMC's default ranking is relevance — measurably better for
-                    // clinical queries than date/citation sorting, which surfaces
-                    // tangential full-text matches. Recency intent is enforced by the
-                    // PUB_YEAR filter instead. An invalid sort value also makes the API
-                    // return a version-only stub.
                     const response = await fetch(url.toString(), { signal });
                     if (!response.ok) { failures.push({ component: 'europe_pmc', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); continue; }
                     const data = await response.json();
                     let results = data.resultList?.result || [];
-                    if (!results.length && (data.hitCount === undefined || data.hitCount > 0)) {
+                    if (!results.length && data.hitCount === undefined && !data.version) {
                         // A stub response ({"version":...} without resultList) means the
                         // request was rejected or throttled; retry once unsorted.
                         const retryUrl = new URL('https://www.ebi.ac.uk/europepmc/webservices/rest/search');
@@ -255,13 +248,13 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                 const cleanQuery = query.replace(/[()]/g, ' ').trim();
                 const tokens = getQueryTokens(cleanQuery);
                 if (!tokens.length) return [];
-                // openFDA phrase-searches fail on long natural-language queries;
-                // AND the top discriminating tokens instead (spec §16 expansion).
+                // openFDA searches work best with generic_name or brand_name;
+                // search on focused tokens with OR, and fallback to indications.
                 const focus = tokens.slice(0, 3);
-                const termQuery = focus.length ? `(${focus.join(' AND ')})` : `"${cleanQuery}"`;
+                const termQuery = focus.length ? `(${focus.join(' OR ')})` : `"${cleanQuery}"`;
                 const url = new URL('https://api.fda.gov/drug/label.json');
-                url.searchParams.append('search', `indications_and_usage:${termQuery} OR generic_name:${termQuery}`);
-                url.searchParams.append('limit', '1');
+                url.searchParams.append('search', `openfda.generic_name:${termQuery} OR openfda.brand_name:${termQuery} OR indications_and_usage:${termQuery}`);
+                url.searchParams.append('limit', '2');
 
                 const response = await fetch(url.toString(), { signal });
                 if (!response.ok) { failures.push({ component: 'fda', code: 'SOURCE_UNAVAILABLE', message: `HTTP ${response.status}` }); return []; }
@@ -269,19 +262,26 @@ async function fetchClinicalLiterature(query, specialtyId, options = {}) {
                 const results = data.results || [];
 
                 return results.map(r => {
+                    const brand = r.openfda?.brand_name?.[0] || '';
+                    const generic = r.openfda?.generic_name?.[0] || '';
                     const abstract = `INDICATIONS: ${r.indications_and_usage?.[0] || 'N/A'}\nWARNINGS: ${r.boxed_warning?.[0] || r.warnings?.[0] || 'No boxed warnings.'}`;
+                    const drugName = brand || generic || 'Drug';
+                    const title = `FDA Label: ${drugName}`;
+                    const labelTokens = new Set(`${brand} ${generic} ${abstract}`.toLowerCase().split(/\s+/));
+                    const matchesAnyToken = tokens.some((t) => labelTokens.has(t) || generic.toLowerCase().includes(t) || brand.toLowerCase().includes(t));
+                    const relevance = matchesAnyToken ? Math.max(0.7, computeRelevance(`${title} ${abstract}`, tokens)) : computeRelevance(`${title} ${abstract}`, tokens);
                     return {
                         source: 'OpenFDA (FDA.gov)',
-                        title: `FDA Label: ${r.openfda?.brand_name?.[0] || r.openfda?.generic_name?.[0] || 'Drug'}`,
+                        title,
                         author: 'U.S. FDA Center for Drug Evaluation',
                         journal: 'FDA Official Labeling',
                         year: r.effective_time?.substring(0,4) || 'Current',
                         url: 'https://www.accessdata.fda.gov/scripts/cder/daf/',
                         abstract,
                         type: 'Official FDA Data',
-                        relevance_score: computeRelevance(`${r.openfda?.brand_name?.[0] || ''} ${r.openfda?.generic_name?.[0] || ''} ${abstract}`, tokens),
+                        relevance_score: relevance,
                     };
-                }).filter(r => isRelevantLiterature(r, cleanQuery));
+                }).filter(r => r.relevance_score >= 0.55 || isRelevantLiterature(r, cleanQuery));
             } catch (error) {
                 if (signal?.aborted || error?.name === 'AbortError') throw Object.assign(new Error('OpenFDA request aborted at request deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
                 failures.push({ component: 'fda', code: 'NETWORK_ERROR', message: error.message });

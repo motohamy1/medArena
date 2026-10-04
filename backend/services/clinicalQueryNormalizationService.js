@@ -88,12 +88,11 @@ function fallbackAnchor(query, message) {
     // cannot safely anchor a treatment search.
     if (query.condition === 'obesity' && query.intent !== 'follow_up' && !query.comparison) return 'obesity';
 
-    // English-only unknown terms can still be searched exactly and must pass
-    // the same evidence anchor gate. Arabic-only input must be translated or
-    // clarified rather than sent to English literature search as empty tokens.
-    if (!isArabic(message)) {
-        const tokens = getQueryTokens(message);
-        if (tokens.length) return tokens.slice(0, 4).join(' ');
+    // English-only or mixed Arabic-English queries can still be searched directly and
+    // must pass the same evidence anchor gate.
+    const englishTokens = getQueryTokens(messageWithoutArabic(message));
+    if (englishTokens.length) {
+        return englishTokens.slice(0, 4).join(' ');
     }
     return null;
 }
@@ -166,10 +165,22 @@ function normalizeDeterministicQuery(query, message) {
     const englishTerms = getQueryTokens(messageWithoutArabic(message));
     const intentTerms = INTENT_TERMS[query.intent] || [];
     const allTerms = unique([anchor, ...parsedTerms, ...englishTerms, ...intentTerms]);
+    const condition = query.condition || (anchor && !MODIFIER_CONDITIONS.has(anchor) ? anchor : null);
+    const conditions = Array.isArray(query.conditions) && query.conditions.length > 0
+        ? query.conditions
+        : (condition ? [{ concept: condition, confidence: 0.9, source: 'mixed_language_extraction' }] : []);
+    const combinedAnchors = unique([
+        ...(query.retrieval_anchors || []),
+        anchor,
+        ...(query.medications || []),
+        ...englishTerms,
+    ]).filter((a) => a && !MODIFIER_CONDITIONS.has(a));
 
     return {
         ...query,
-        retrieval_anchors: anchor ? [anchor] : [],
+        condition,
+        conditions,
+        retrieval_anchors: combinedAnchors.length ? combinedAnchors : (anchor ? [anchor] : []),
         search_terms: allTerms,
         normalized_query: allTerms.join(' '),
         query_normalization: { source: 'deterministic', confidence: anchor ? 1 : 0 },
@@ -186,7 +197,11 @@ async function normalizeClinicalQueryForRetrieval(query, message, options = {}) 
     const rawMessage = String(message || '');
     let normalizedQuery = normalizeDeterministicQuery(query || {}, rawMessage);
     const hasArabic = isArabic(rawMessage);
-    const requiresTranslation = hasArabic && !hasPrimaryDisease(query || {});
+    const englishTokens = getQueryTokens(messageWithoutArabic(rawMessage));
+    const hasEnglishTokens = englishTokens.length > 0;
+    // Pure Arabic queries without direct English clinical tokens require translation.
+    // If the message has English clinical tokens, we already have exact medical terms.
+    const requiresTranslation = !hasPrimaryDisease(query || {}) && (hasArabic ? !hasEnglishTokens : !parsedAnchor(query || {}));
     let translation = null;
 
     if (requiresTranslation && !(query || {}).clarification_required) {
@@ -215,10 +230,13 @@ async function normalizeClinicalQueryForRetrieval(query, message, options = {}) 
     }
 
     // Keep search text English/canonical; never turn unparsed Arabic into a
-    // broad literature query. The user's original text remains untouched.
-    if (translation) normalizedQuery = mergeTranslation(normalizedQuery, translation, rawMessage);
-    else normalizedQuery = normalizeDeterministicQuery(normalizedQuery, rawMessage);
-    normalizedQuery.retrieval_anchors = [anchor];
+    if (translation) {
+        normalizedQuery = mergeTranslation(normalizedQuery, translation, rawMessage);
+        normalizedQuery.retrieval_anchors = [anchor];
+    } else {
+        normalizedQuery = normalizeDeterministicQuery(normalizedQuery, rawMessage);
+        normalizedQuery.retrieval_anchors = unique([anchor, ...(normalizedQuery.retrieval_anchors || [])]).filter(Boolean);
+    }
     return { status: 'OK', query: normalizedQuery };
 }
 

@@ -73,3 +73,38 @@ test('unrecognized Arabic with no model response requests clarification', async 
 
     assert.equal(result.status, 'CLARIFICATION_REQUIRED');
 });
+
+test('English question outside the lexicon gets a validated AI-extracted disease anchor', async () => {
+    const message = 'management of acute asthma exacerbation in adults';
+    const query = interpretClinicalQuery(message, []);
+    assert.equal(query.condition, null); // deterministic interpreter gap
+
+    const result = await normalizeClinicalQueryForRetrieval(query, message, {
+        translateQuery: async () => JSON.stringify({
+            primary_condition: 'acute asthma exacerbation',
+            medications: [],
+            drug_classes: [],
+            symptoms: [],
+            search_query: 'acute asthma exacerbation management',
+            confidence: 0.95,
+            ambiguous: false,
+        }),
+    });
+
+    assert.equal(result.status, 'OK');
+    assert.equal(result.query.condition, 'acute asthma exacerbation');
+    assert.deepEqual(result.query.retrieval_anchors, ['acute asthma exacerbation']);
+});
+
+test('English question with a recognized condition never pays for an extraction call', async () => {
+    const message = 'management of acute pancreatitis';
+    const query = interpretClinicalQuery(message, []);
+    let called = false;
+
+    const result = await normalizeClinicalQueryForRetrieval(query, message, {
+        translateQuery: async () => { called = true; throw new Error('must not run'); },
+    });
+
+    assert.equal(called, false);
+    assert.equal(result.query.condition, 'acute pancreatitis');
+});

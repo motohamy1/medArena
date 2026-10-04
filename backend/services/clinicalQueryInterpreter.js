@@ -51,6 +51,10 @@ const EGYPTIAN_TERMS = Object.freeze({
 // Multi-word / phrase-level canonical concepts matched on the normalized text
 // before tokenization (token-level matching would split them).
 const PHRASE_CONCEPTS = Object.freeze([
+    { pattern: /\b(?:acute\s+)?upper\s+(?:gi|gastrointestinal)\s+(?:bleed(?:ing)?|h(?:a)?emorrhage)\b|نزيف (?:الجهاز الهضمي|المعدة) العلوي|نزيف معوي علوي|نزيف علوي/, concept: 'upper gi bleeding', type: 'condition' },
+    { pattern: /\bvariceal\s+(?:bleed(?:ing)?|h(?:a)?emorrhage)\b|نزيف دوالي/, concept: 'variceal bleeding', type: 'condition' },
+    { pattern: /\bpeptic\s+ulcer\s+(?:bleed(?:ing)?|h(?:a)?emorrhage)\b/, concept: 'peptic ulcer bleeding', type: 'condition' },
+    { pattern: /\b(?:gi|gastrointestinal)\s+(?:bleed(?:ing)?|h(?:a)?emorrhage)\b|نزيف (?:معوي|الجهاز الهضمي)/, concept: 'gi bleeding', type: 'condition' },
     { pattern: /\bacute pancreatitis\b|التهاب البنكرياس الحاد/, concept: 'acute pancreatitis', type: 'condition' },
     { pattern: /\bchronic pancreatitis\b|التهاب البنكرياس المزمن/, concept: 'chronic pancreatitis', type: 'condition' },
     { pattern: /\bpancreatitis\b|التهاب البنكرياس(?!\s+الحاد|\s+المزمن)/, concept: 'pancreatitis', type: 'condition' },
@@ -68,6 +72,15 @@ const PHRASE_CONCEPTS = Object.freeze([
     { pattern: /\bpeptic ulcer\b|\bgi ulcer\b|قرحة المعدة|قرحة الاثني عشر/, concept: 'peptic ulcer', type: 'condition' },
     { pattern: /\bhypertensive emergency\b|أزمة ضغطية|طفح ضغطي/, concept: 'hypertensive emergency', type: 'condition' },
     { pattern: /\bhelicobacter pylori\b|\bh pylori\b|جرثومة المعدة/, concept: 'helicobacter pylori', type: 'condition' },
+    { pattern: /\b(?:acute\s+)?mesenteric\s+isch(?:a)?emia\b|نقص تروية المساريق|احتشاء معوي/, concept: 'acute mesenteric ischemia', type: 'condition' },
+    { pattern: /\bpulmonary\s+embolism\b|الانسداد الرئوي|جلطة رئوية/, concept: 'pulmonary embolism', type: 'condition' },
+    { pattern: /\bdeep\s+vein\s+thrombosis\b|جلطة الأوردة العميقة|تخثر وريدي عميق/, concept: 'deep vein thrombosis', type: 'condition' },
+    { pattern: /\batrial\s+fibrillation\b|الرجفان الأذيني/, concept: 'atrial fibrillation', type: 'condition' },
+    { pattern: /\bdiabetic\s+ketoacidosis\b|الحماض الكيتوني السكري/, concept: 'diabetic ketoacidosis', type: 'condition' },
+    { pattern: /\bacute\s+kidney\s+injury\b|قصور كلوي حاد|فشل كلوي حاد/, concept: 'acute kidney injury', type: 'condition' },
+    { pattern: /\botitis\s+media\b|التهاب الأذن الوسطى/, concept: 'otitis media', type: 'condition' },
+    { pattern: /\burinary\s+tract\s+infection\b|التهاب المسالك البولية/, concept: 'urinary tract infection', type: 'condition' },
+    { pattern: /\binfective\s+endocarditis\b|التهاب شغاف القلب/, concept: 'infective endocarditis', type: 'condition' },
 ]);
 
 // token -> canonical (English surface forms + common abbreviations)
@@ -81,7 +94,32 @@ const ENGLISH_LEXICON = Object.freeze({
     cholangitis: { term: 'acute cholangitis', type: 'condition' },
     cholecystitis: { term: 'cholecystitis', type: 'condition' },
     ulcer: { term: 'peptic ulcer', type: 'condition' },
+    ugib: { term: 'upper gi bleeding', type: 'condition' },
+    hematemesis: { term: 'upper gi bleeding', type: 'condition' }, haematemesis: { term: 'upper gi bleeding', type: 'condition' },
+    melena: { term: 'gi bleeding', type: 'condition' }, melaena: { term: 'gi bleeding', type: 'condition' },
     ckd: { term: 'chronic kidney disease', type: 'condition' },
+    croup: { term: 'croup', type: 'condition' },
+    pericarditis: { term: 'pericarditis', type: 'condition' },
+    pneumonia: { term: 'pneumonia', type: 'condition' },
+    copd: { term: 'copd', type: 'condition' },
+    appendicitis: { term: 'appendicitis', type: 'condition' },
+    meningitis: { term: 'meningitis', type: 'condition' },
+    sepsis: { term: 'sepsis', type: 'condition' }, septic: { term: 'sepsis', type: 'condition' },
+    cellulitis: { term: 'cellulitis', type: 'condition' },
+    bronchiolitis: { term: 'bronchiolitis', type: 'condition' },
+    bronchitis: { term: 'bronchitis', type: 'condition' },
+    gout: { term: 'gout', type: 'condition' },
+    pyelonephritis: { term: 'pyelonephritis', type: 'condition' },
+    cystitis: { term: 'cystitis', type: 'condition' },
+    cirrhosis: { term: 'cirrhosis', type: 'condition' },
+    hepatitis: { term: 'hepatitis', type: 'condition' },
+    migraine: { term: 'migraine', type: 'condition' },
+    seizure: { term: 'seizure', type: 'condition' }, seizures: { term: 'seizure', type: 'condition' },
+    epilepsy: { term: 'epilepsy', type: 'condition' },
+    stroke: { term: 'stroke', type: 'condition' },
+    pe: { term: 'pulmonary embolism', type: 'condition' },
+    dvt: { term: 'deep vein thrombosis', type: 'condition' },
+    afib: { term: 'atrial fibrillation', type: 'condition' },
     // drug classes
     thiazide: { term: 'thiazide', type: 'drug_class' }, thiazides: { term: 'thiazide', type: 'drug_class' },
     ccb: { term: 'calcium channel blocker', type: 'drug_class' }, ccbs: { term: 'calcium channel blocker', type: 'drug_class' },
@@ -90,12 +128,43 @@ const ENGLISH_LEXICON = Object.freeze({
     diuretic: { term: 'diuretic', type: 'drug_class' }, diuretics: { term: 'diuretic', type: 'drug_class' },
     'beta-blocker': { term: 'beta blocker', type: 'drug_class' }, bb: { term: 'beta blocker', type: 'drug_class' },
     statin: { term: 'statin', type: 'drug_class' }, statins: { term: 'statin', type: 'drug_class' },
+    corticosteroid: { term: 'corticosteroid', type: 'drug_class' }, corticosteroids: { term: 'corticosteroid', type: 'drug_class' },
+    steroid: { term: 'corticosteroid', type: 'drug_class' }, steroids: { term: 'corticosteroid', type: 'drug_class' },
+    nsaid: { term: 'nsaid', type: 'drug_class' }, nsaids: { term: 'nsaid', type: 'drug_class' },
+    antibiotic: { term: 'antibiotic', type: 'drug_class' }, antibiotics: { term: 'antibiotic', type: 'drug_class' },
+    anticoagulant: { term: 'anticoagulant', type: 'drug_class' }, anticoagulants: { term: 'anticoagulant', type: 'drug_class' },
+    antiplatelet: { term: 'antiplatelet', type: 'drug_class' }, antiplatelets: { term: 'antiplatelet', type: 'drug_class' },
+    ppi: { term: 'proton pump inhibitor', type: 'drug_class' }, ppis: { term: 'proton pump inhibitor', type: 'drug_class' },
     // drugs
     amlodipine: { term: 'amlodipine', type: 'drug' }, lisinopril: { term: 'lisinopril', type: 'drug' },
     losartan: { term: 'losartan', type: 'drug' }, metformin: { term: 'metformin', type: 'drug' },
     diclofenac: { term: 'diclofenac', type: 'drug' }, paracetamol: { term: 'paracetamol', type: 'drug' },
     ciprofloxacin: { term: 'ciprofloxacin', type: 'drug' }, insulin: { term: 'insulin', type: 'drug' },
     doxycycline: { term: 'doxycycline', type: 'drug' }, amoxicillin: { term: 'amoxicillin', type: 'drug' },
+    dexamethasone: { term: 'dexamethasone', type: 'drug' }, prednisolone: { term: 'prednisolone', type: 'drug' },
+    prednisone: { term: 'prednisone', type: 'drug' }, hydrocortisone: { term: 'hydrocortisone', type: 'drug' },
+    methylprednisolone: { term: 'methylprednisolone', type: 'drug' }, ceftriaxone: { term: 'ceftriaxone', type: 'drug' },
+    cefotaxime: { term: 'cefotaxime', type: 'drug' }, cefepime: { term: 'cefepime', type: 'drug' },
+    cefixime: { term: 'cefixime', type: 'drug' }, azithromycin: { term: 'azithromycin', type: 'drug' },
+    clarithromycin: { term: 'clarithromycin', type: 'drug' }, levofloxacin: { term: 'levofloxacin', type: 'drug' },
+    moxifloxacin: { term: 'moxifloxacin', type: 'drug' }, meropenem: { term: 'meropenem', type: 'drug' },
+    vancomycin: { term: 'vancomycin', type: 'drug' }, metronidazole: { term: 'metronidazole', type: 'drug' },
+    colchicine: { term: 'colchicine', type: 'drug' }, aspirin: { term: 'aspirin', type: 'drug' },
+    clopidogrel: { term: 'clopidogrel', type: 'drug' }, atorvastatin: { term: 'atorvastatin', type: 'drug' },
+    rosuvastatin: { term: 'rosuvastatin', type: 'drug' }, heparin: { term: 'heparin', type: 'drug' },
+    enoxaparin: { term: 'enoxaparin', type: 'drug' }, clexane: { term: 'enoxaparin', type: 'drug' },
+    warfarin: { term: 'warfarin', type: 'drug' }, apixaban: { term: 'apixaban', type: 'drug' },
+    rivaroxaban: { term: 'rivaroxaban', type: 'drug' }, furosemide: { term: 'furosemide', type: 'drug' },
+    lasix: { term: 'furosemide', type: 'drug' }, spironolactone: { term: 'spironolactone', type: 'drug' },
+    pantoprazole: { term: 'pantoprazole', type: 'drug' }, omeprazole: { term: 'omeprazole', type: 'drug' },
+    esomeprazole: { term: 'esomeprazole', type: 'drug' }, epinephrine: { term: 'epinephrine', type: 'drug' },
+    adrenaline: { term: 'epinephrine', type: 'drug' }, norepinephrine: { term: 'norepinephrine', type: 'drug' },
+    noradrenaline: { term: 'norepinephrine', type: 'drug' }, atropine: { term: 'atropine', type: 'drug' },
+    amiodarone: { term: 'amiodarone', type: 'drug' }, albuterol: { term: 'albuterol', type: 'drug' },
+    salbutamol: { term: 'salbutamol', type: 'drug' }, budesonide: { term: 'budesonide', type: 'drug' },
+    ibuprofen: { term: 'ibuprofen', type: 'drug' }, brufen: { term: 'ibuprofen', type: 'drug' },
+    ondansetron: { term: 'ondansetron', type: 'drug' }, zofran: { term: 'ondansetron', type: 'drug' },
+    acetaminophen: { term: 'paracetamol', type: 'drug' },
     // symptoms
     fever: { term: 'fever', type: 'symptom' }, vomiting: { term: 'vomiting', type: 'symptom' },
     dyspnea: { term: 'dyspnea', type: 'symptom' }, headache: { term: 'headache', type: 'symptom' },
@@ -561,9 +630,27 @@ function interpretClinicalQuery(message, history = []) {
     // raw tokens are appended so wholly-unseen vocabulary still reaches the
     // retrieval layer, but noise tokens (numbers, negation words, unresolved
     // ambiguous abbreviations, pure Arabic function words) are excluded.
-    const AR_FUNCTION_WORDS = new Set(['دلوقتي', 'دولوقتي', 'طب', 'طيب', 'كان', 'عنده', 'عندي', 'بسبب', 'ايه', 'إيه', 'اللي', 'من', 'في', 'على', 'لو', 'دا', 'ده', 'ممحكن', 'ممكن', 'احسن', 'أحسن', 'افضل', 'أفضل', 'ولا', 'أو', 'او', 'هل', 'الـ', 'زي', 'زيادة', 'حالة', 'وهل', 'وبديله', 'مفيش', 'مش', 'ليها', 'ليه', 'زيادة']);
+    const AR_FUNCTION_WORDS = new Set([
+        'دلوقتي', 'دولوقتي', 'طب', 'طيب', 'كان', 'عنده', 'عندي', 'بسبب', 'ايه', 'إيه',
+        'اللي', 'من', 'في', 'على', 'لو', 'دا', 'ده', 'دي', 'ممحكن', 'ممكن', 'احسن', 'أحسن',
+        'افضل', 'أفضل', 'ولا', 'أو', 'او', 'هل', 'الـ', 'زي', 'زيادة', 'حالة', 'وهل',
+        'وبديله', 'مفيش', 'مش', 'ليها', 'ليه', 'طفل', 'طفلة', 'اطفال', 'أطفال', 'سنة',
+        'سنين', 'سنوات', 'سنتين', 'وزن', 'وزنه', 'وزنها', 'كيلو', 'بتاع', 'بتاعة', 'بتاعت',
+        'بتاعته', 'بتاعتها', 'عيان', 'عيانة', 'العيان', 'العيانة', 'مريض', 'مريضة', 'المريض',
+        'المريضة', 'ازاي', 'إزاي', 'علشان', 'عشان', 'ينفع', 'اديله', 'اديه', 'اديها', 'اعطيه',
+        'نعطيه', 'معلش', 'شكرا', 'سمحت', 'بروتوكول', 'يا', 'دكتور', 'محتاج', 'محتاجة',
+    ]);
     const NOISE_TOKENS = new Set(['not', 'no', 'like', 'her', 'his', 'she', 'and', 'the', 'with', 'best', 'what', 'is']);
-    const rawTokens = tokens.filter(({ token, index }) => token.length > 2 && !NOISE_TOKENS.has(token) && !AR_FUNCTION_WORDS.has(token) && !mask.mask[index] && !ambiguities.some((a) => a.token === token) && !/^(\d)/.test(token) && !/^50s$/.test(token));
+    const rawTokens = tokens.filter(({ token, index }) =>
+        token.length > 2
+        && !NOISE_TOKENS.has(token)
+        && !AR_FUNCTION_WORDS.has(token)
+        && !mask.mask[index]
+        && !ambiguities.some((a) => a.token === token)
+        && !/^(\d)/.test(token)
+        && !/^50s$/.test(token)
+        && (!language.mixed || !/^[\u0600-\u06ff]+$/u.test(token))
+    );
     for (const { token } of rawTokens) { const canonical = ENGLISH_SYNONYMS[token] || token; pushTerm(canonical); }
     // Inherited conditions/terms from session state keep follow-up retrieval grounded.
     if (sessionState.active && isFollowUp) {
@@ -602,7 +689,7 @@ function interpretClinicalQuery(message, history = []) {
         complexity,
         condition: conditionName,
         conditions,
-        retrieval_anchors: [conditionName || medications[0] || drugClasses[0] || symptoms[0] || labs[0]?.name].filter(Boolean),
+        retrieval_anchors: [conditionName, ...medications, ...drugClasses, ...symptoms].filter(Boolean),
         patient: {
             sex,
             age: { value: ageValue, unit: ageValue != null ? 'years' : null, range: ageRange },

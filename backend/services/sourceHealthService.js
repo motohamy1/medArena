@@ -8,16 +8,16 @@
 // Health metadata is also surfaced (never secrets) via /api/system/status.
 
 const SOURCE_TIMEOUT_MS = {
-    internal_knowledge: 4000, // includes Gemini query embedding
-    pubmed: 5000,
-    europe_pmc: 5000,
+    internal_knowledge: 6000, // includes Gemini query embedding
+    pubmed: 6000,
+    europe_pmc: 7000,
     clinicaltrials_gov: 6000,
-    fda: 5000,
+    fda: 6000,
 };
-const DEFAULT_TIMEOUT_MS = 5000;
-const MAX_RETRIES = 2; // spec §43: max 2 retries for transient errors
-const BREAKER_THRESHOLD = 3; // consecutive failures before OPEN
-const BREAKER_COOLDOWN_MS = 60000;
+const DEFAULT_TIMEOUT_MS = 6000;
+const MAX_RETRIES = 1; // spec §43: max 1 retry for transient errors to avoid budget starvation
+const BREAKER_THRESHOLD = 5; // consecutive failures before OPEN
+const BREAKER_COOLDOWN_MS = 30000;
 
 const TRANSIENT_CODES = new Set(['RETRIEVAL_TIMEOUT', 'SOURCE_UNAVAILABLE', 'RATE_LIMITED', 'NETWORK_ERROR']);
 

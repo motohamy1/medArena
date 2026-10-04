@@ -49,7 +49,7 @@ function buildEvidenceContext(evidence) {
 // the model may use "### Heading" markdown for multi-part answers, which the
 // composer parses into the structured sections field.
 function buildComposerPrompt(query, evidenceContext, sessionState) {
-    return `You are the Med Arena clinical composer. The supplied evidence is authoritative context for this response. Use only facts supported by the supplied evidence for material clinical claims. Never invent citations or claim a source was checked unless it appears below. If evidence is insufficient, state the limitation. If evidence conflicts, report the conflict. Preserve structured patient context. Match the user's language. Keep the answer natural. Do not emit UI control markup other than optional "### Heading" lines for distinct sections. Return only the answer prose.\n\nRESPONSE POLICY: ${composerPolicy(query, sessionState)}\n\nPATIENT CONTEXT (from stated information only): ${JSON.stringify(sessionState)}\n\nINTERPRETED QUERY:\n${JSON.stringify(query)}\n\nRETRIEVED EVIDENCE:\n${evidenceContext}`;
+    return `You are the Med Arena clinical composer. The supplied evidence is authoritative context for this response. Use only facts supported by the supplied evidence for material clinical claims. Never invent citations or claim a source was checked unless it appears below. If evidence is insufficient, state the limitation. If evidence conflicts, report the conflict. Preserve structured patient context. Match the user's language. Keep the answer natural, concise, and structured. Do not repeat sentences or disclaimers. Avoid repetitive filler. Do not emit UI control markup other than optional "### Heading" lines for distinct sections. Return only the answer prose.\n\nRESPONSE POLICY: ${composerPolicy(query, sessionState)}\n\nPATIENT CONTEXT (from stated information only): ${JSON.stringify(sessionState)}\n\nINTERPRETED QUERY:\n${JSON.stringify(query)}\n\nRETRIEVED EVIDENCE:\n${evidenceContext}`;
 }
 
 function dedupeById(items) {
@@ -173,7 +173,9 @@ router.post('/', async (req, res) => {
         const plan = createRetrievalPlan(query, sessionState, tasks);
         // Spec §33: request-level time budget — retrieval must respect the
         // plan's budget so a NORMAL request never becomes a 45s spinner.
-        const retrievalDeadline = plan.time_budget_ms ? Date.now() + plan.time_budget_ms : null;
+        // Allow a realistic floor of 12000ms for network latency to external registries (NCBI, Europe PMC, FDA).
+        const effectiveBudget = Math.max(12000, plan.time_budget_ms || 8000);
+        const retrievalDeadline = Date.now() + effectiveBudget;
         logEvent(requestId, 'retrieval_started', { intent: query.intent, complexity: query.complexity, source_count: plan.plans.length, task_count: tasks.length, max_rounds: plan.max_rounds, time_budget_ms: plan.time_budget_ms });
 
         // Spec §39/§87: high-risk dosing without clinically necessary inputs

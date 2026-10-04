@@ -93,7 +93,8 @@ export const aiService = {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    // Allow up to 75s to accommodate remote cold starts without client aborts
+    const timeoutId = setTimeout(() => controller.abort(), 75000);
     try {
       const response = await fetch(`${BACKEND_URL}/api/chat/v2`, {
         method: 'POST',

@@ -27,7 +27,7 @@ function abortedRequestError() {
     return Object.assign(new Error('Internal knowledge request aborted at retrieval deadline'), { code: 'RETRIEVAL_TIMEOUT', name: 'AbortError' });
 }
 
-async function generateEmbedding(text, { signal, timeoutMs = 3000 } = {}) {
+async function generateEmbedding(text, { signal, timeoutMs = 5000 } = {}) {
     if (!embeddingModel) {
         const error = new Error('Embedding provider not configured (GEMINI_API_KEY missing)');
         error.code = 'EMBEDDING_FAILURE';
@@ -69,8 +69,7 @@ async function searchInternalKnowledgeLexical(queryText, matchCount = 5, { signa
     const filter = ranked.map((token) => `content.ilike.%${token}%,title.ilike.%${token}%`).join(',');
     let request = getSupabase()
         .from('custom_knowledge')
-        .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
-        .eq('is_active', true)
+        .select('id, title, source_url, content')
         .or(filter)
         .limit(matchCount * 4);
     if (signal && typeof request.abortSignal === 'function') request = request.abortSignal(signal);
@@ -104,7 +103,7 @@ async function searchInternalKnowledge(queryText, matchCount = 5, matchThreshold
 
     // 1. Vector path
     try {
-        const queryEmbedding = await generateEmbedding(queryText, { signal, timeoutMs: 3000 });
+        const queryEmbedding = await generateEmbedding(queryText, { signal, timeoutMs: 5000 });
         let request = getSupabase().rpc('match_custom_knowledge', {
             query_embedding: queryEmbedding,
             match_threshold: matchThreshold,
@@ -144,8 +143,7 @@ async function searchInternalKnowledge(queryText, matchCount = 5, matchThreshold
             try {
                 let request = getSupabase()
                     .from('custom_knowledge')
-                    .select('id, title, guideline_society, publication_year, version_tag, source_url, pmid, content')
-                    .eq('is_active', true)
+                    .select('id, title, source_url, content')
                     .ilike('title', `%${probe}%`)
                     .limit(matchCount);
                 if (signal && typeof request.abortSignal === 'function') request = request.abortSignal(signal);

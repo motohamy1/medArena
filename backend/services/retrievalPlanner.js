@@ -80,7 +80,7 @@ function createRetrievalPlan(query, sessionState = {}, tasks = []) {
     }
     // PubMed carries abstracts (spec §20) and materially widens coverage for
     // diagnosis/workup questions the internal corpus may not hold.
-    if (['diagnosis_question', 'guideline_question', 'clinical_management'].includes(intent)) {
+    if (['diagnosis_question', 'guideline_question', 'clinical_management', 'drug_question'].includes(intent)) {
         addPlan('literature', 'pubmed', sourceSpecificQueries('pubmed', baseQuery, coreQuery, focusQueries), 15);
     }
     if (['research_question', 'latest_evidence', 'complex_case'].includes(intent)) {

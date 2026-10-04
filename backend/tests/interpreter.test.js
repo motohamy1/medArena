@@ -60,6 +60,20 @@ test('TEST F: "مفيش emergency" is explicit negation', () => {
     assert.equal(query.emergency_context.explicitly_excluded, true);
 });
 
+test('TEST G: upper GI bleeding question anchors on the condition, not a verb phrase', () => {
+    const query = interpretClinicalQuery('Detail the initial resuscitation and pharmacotherapy (IV PPI, Octreotide, Ceftriaxone) for acute Upper GI Bleeding and endoscopy timing within 24 hours.', []);
+    assert.ok(query.conditions.some((c) => c.concept === 'upper gi bleeding'), `conditions: ${JSON.stringify(query.conditions)}`);
+    assert.equal(query.condition, 'upper gi bleeding');
+    assert.ok(query.retrieval_anchors.includes('upper gi bleeding'), `anchors: ${JSON.stringify(query.retrieval_anchors)}`);
+});
+
+test('TEST H: bleeding aliases resolve to bleeding conditions', () => {
+    const ugib = interpretClinicalQuery('UGIB management in the ED', []);
+    assert.ok(ugib.conditions.some((c) => c.concept === 'upper gi bleeding'), `conditions: ${JSON.stringify(ugib.conditions)}`);
+    const melena = interpretClinicalQuery('melena workup in an elderly patient', []);
+    assert.ok(melena.conditions.some((c) => c.concept === 'gi bleeding'), `conditions: ${JSON.stringify(melena.conditions)}`);
+});
+
 test('explicit recency language requests current; otherwise not_specified', () => {
     assert.equal(interpretClinicalQuery('latest recommendations for hypertension treatment', []).temporal_request, 'current');
     assert.equal(interpretClinicalQuery('what was recommended in 2021 for hypertension', []).temporal_request, 'historical');

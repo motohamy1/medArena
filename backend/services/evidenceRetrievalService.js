@@ -106,7 +106,7 @@ function normalizeLegacyResult(item) {
 // Bounded per spec §16/§25: try the planner's query variants (base + focus
 // pairs), then one broad (filter-free) expansion round before reporting zero
 // evidence.
-const MAX_QUERY_VARIANTS = 4;
+const MAX_QUERY_VARIANTS = 2;
 
 async function fetchFromSource(sourcePlan, queryText, query, { broad = false, signal } = {}) {
     if (sourcePlan.source_id === 'internal_knowledge') {
@@ -166,10 +166,25 @@ function getPrimaryRetrievalAnchor(query = {}) {
 }
 
 function evidenceAnchorRelevance(item, query = {}) {
-    const anchor = getPrimaryRetrievalAnchor(query);
-    const anchorTokens = getQueryTokens(anchor);
-    if (!anchorTokens.length) return 0;
-    return computeRelevance(`${item?.title || ''} ${item?.content || item?.excerpt || ''}`, anchorTokens);
+    const text = `${item?.title || ''} ${item?.content || item?.excerpt || ''}`;
+    const anchors = [
+        ...(query.retrieval_anchors || []),
+        query.condition,
+        ...(query.conditions || []).map((c) => c?.concept),
+        ...(query.medications || []),
+        ...(query.drug_classes || []),
+    ].filter((a) => a && !MODIFIER_CONDITIONS.has(a));
+
+    if (!anchors.length) return 0;
+
+    let maxRelevance = 0;
+    for (const anchor of anchors) {
+        const tokens = getQueryTokens(anchor);
+        if (!tokens.length) continue;
+        const score = computeRelevance(text, tokens);
+        if (score > maxRelevance) maxRelevance = score;
+    }
+    return maxRelevance;
 }
 
 function isEvidenceRelevant(item, query = {}) {
@@ -219,7 +234,7 @@ async function retrieveEvidence(plan, query, { forceBroad = false, focusTasks = 
             } else if (error && !error.skipped) {
                 failures.push({ source_id: sourcePlan.source_id, code: error.code || 'SOURCE_UNAVAILABLE', message: error.message });
             }
-            if (collected.length >= 8) break;
+            if (collected.length >= 5) break;
         }
         return collected;
     };

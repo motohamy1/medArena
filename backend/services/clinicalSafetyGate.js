@@ -29,8 +29,11 @@ function assessDosingSafety(query) {
     const isAnticoag = /heparin|warfarin|apixaban|anticoagul/i.test(raw);
 
     if (isPediatric) {
-        const missingAge = query.patient.age.value == null && !query.patient.age.range;
-        const missingWeight = query.patient.weight_kg == null;
+        const hasAge = (query.patient?.age?.value != null || query.patient?.age?.range != null)
+            || (query.population?.age != null || query.population?.age_range != null);
+        const hasWeight = query.patient?.weight_kg != null || query.population?.weight != null;
+        const missingAge = !hasAge;
+        const missingWeight = !hasWeight;
         if (missingAge || missingWeight) {
             const missing = [
                 missingAge ? 'age' : null,
