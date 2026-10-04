@@ -72,3 +72,9 @@ backend/venv/
 /.planning/
 /.planning
 .planning/codebase
+
+.amp
+.commandcode
+.commandcode
+.hermes
+.kilo
