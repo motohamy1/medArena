@@ -10,6 +10,7 @@ const INTENT_TERMS = Object.freeze({
     drug_question: ['drug dose', 'safety', 'drug label'],
     comparison: ['comparative effectiveness', 'clinical outcomes'],
     research_question: ['clinical research', 'study'],
+    latest_evidence: ['recent updates', 'guideline recommendations', 'trial outcomes'],
 });
 
 const TRANSLATION_SYSTEM_PROMPT = `You are a medical search-query translator, not a clinician and not an answer generator.

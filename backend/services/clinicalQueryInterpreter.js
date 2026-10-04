@@ -33,6 +33,21 @@ const EGYPTIAN_TERMS = Object.freeze({
     'اوجمنتين': { term: 'amoxicillin clavulanate', type: 'drug' },
     'أوجمنتين': { term: 'amoxicillin clavulanate', type: 'drug' },
     'انتينال': { term: 'nifuroxazide', type: 'drug' },
+    'اسهال': { term: 'diarrhea', type: 'symptom' },
+    'إسهال': { term: 'diarrhea', type: 'symptom' },
+    'بكتيري': { term: 'bacterial', type: 'etiology' },
+    'بكتيرية': { term: 'bacterial', type: 'etiology' },
+    'بكتيريا': { term: 'bacterial', type: 'etiology' },
+    'فيروسي': { term: 'viral', type: 'etiology' },
+    'فيروسية': { term: 'viral', type: 'etiology' },
+    'فيروس': { term: 'viral', type: 'etiology' },
+    'مضاد حيوي': { term: 'antibiotic', type: 'drug_class' },
+    'مضادات حيوية': { term: 'antibiotic', type: 'drug_class' },
+    'مضاد': { term: 'antibiotic', type: 'drug_class' },
+    'أطفال': { term: 'pediatric', type: 'population' },
+    'اطفال': { term: 'pediatric', type: 'population' },
+    'طفل': { term: 'pediatric', type: 'population' },
+    'رضيع': { term: 'pediatric', type: 'population' },
     'سكر': { term: 'diabetes', type: 'condition' },
     'ضغط': { term: 'hypertension', type: 'condition' },
     'قرحة': { term: 'peptic ulcer', type: 'condition' },
@@ -81,6 +96,9 @@ const PHRASE_CONCEPTS = Object.freeze([
     { pattern: /\botitis\s+media\b|التهاب الأذن الوسطى/, concept: 'otitis media', type: 'condition' },
     { pattern: /\burinary\s+tract\s+infection\b|التهاب المسالك البولية/, concept: 'urinary tract infection', type: 'condition' },
     { pattern: /\binfective\s+endocarditis\b|التهاب شغاف القلب/, concept: 'infective endocarditis', type: 'condition' },
+    { pattern: /(?:نزلة معوية|النزلة المعوية)\s+(?:ال)?بكتيري(?:ة)?|(?:ل)?(?:إسهال|اسهال|الإسهال|الاسهال)\s+(?:ال)?بكتيري(?:ة)?|\b(?:acute\s+)?bacterial\s+(?:gastroenteritis|diarrh(?:o)?ea|enteritis)\b/i, concept: 'bacterial gastroenteritis', type: 'condition' },
+    { pattern: /\b(?:acute\s+)?gastroenteritis\b|نزلة معوية|النزلة المعوية/i, concept: 'gastroenteritis', type: 'condition' },
+    { pattern: /\b(?:acute\s+)?diarrh(?:o)?ea\b|إسهال|اسهال|الإسهال|الاسهال/i, concept: 'diarrhea', type: 'symptom' },
 ]);
 
 // token -> canonical (English surface forms + common abbreviations)
@@ -120,6 +138,16 @@ const ENGLISH_LEXICON = Object.freeze({
     pe: { term: 'pulmonary embolism', type: 'condition' },
     dvt: { term: 'deep vein thrombosis', type: 'condition' },
     afib: { term: 'atrial fibrillation', type: 'condition' },
+    gastroenteritis: { term: 'gastroenteritis', type: 'condition' },
+    enteritis: { term: 'gastroenteritis', type: 'condition' },
+    // etiology & population
+    bacterial: { term: 'bacterial', type: 'etiology' },
+    viral: { term: 'viral', type: 'etiology' },
+    pediatric: { term: 'pediatric', type: 'population' },
+    pediatrics: { term: 'pediatric', type: 'population' },
+    children: { term: 'pediatric', type: 'population' },
+    child: { term: 'pediatric', type: 'population' },
+    infant: { term: 'pediatric', type: 'population' },
     // drug classes
     thiazide: { term: 'thiazide', type: 'drug_class' }, thiazides: { term: 'thiazide', type: 'drug_class' },
     ccb: { term: 'calcium channel blocker', type: 'drug_class' }, ccbs: { term: 'calcium channel blocker', type: 'drug_class' },
@@ -168,6 +196,7 @@ const ENGLISH_LEXICON = Object.freeze({
     // symptoms
     fever: { term: 'fever', type: 'symptom' }, vomiting: { term: 'vomiting', type: 'symptom' },
     dyspnea: { term: 'dyspnea', type: 'symptom' }, headache: { term: 'headache', type: 'symptom' },
+    diarrhea: { term: 'diarrhea', type: 'symptom' }, diarrhoea: { term: 'diarrhea', type: 'symptom' },
     // labs
     hb: { term: 'hemoglobin', type: 'lab' }, hemoglobin: { term: 'hemoglobin', type: 'lab' },
     creatinine: { term: 'creatinine', type: 'lab' }, hba1c: { term: 'hba1c', type: 'lab' },
@@ -406,7 +435,10 @@ function extractPatientAttributes(normalized, mask, terms) {
 
     const sedentary = /\b(sedentary|low activity|inactive)\b|حرك.{0,8}(قليل|قليلة)|خمول/.test(normalized);
 
-    return { sex, obesity: obesityMention && !obesityNegated ? true : obesityMention && obesityNegated ? false : null, pregnancy, renal_status, hepatic_status, sedentary };
+    const pediatricMention = /\b(child|children|kid|kids|pediatric|paediatric|infant|neonate|newborn|toddler)\b|طفل|أطفال|اطفال|طفلة|طفلين|رضيع/.test(normalized);
+    const pediatric = pediatricMention ? true : null;
+
+    return { sex, pediatric, obesity: obesityMention && !obesityNegated ? true : obesityMention && obesityNegated ? false : null, pregnancy, renal_status, hepatic_status, sedentary };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -547,6 +579,24 @@ function interpretClinicalQuery(message, history = []) {
         else if (resolved.type === 'symptom') symptoms.push(resolved.term);
     }
 
+    // Bacterial etiology & condition refinement:
+    // If bacterial etiology is present and the condition/symptom is gastroenteritis or diarrhea,
+    // establish 'bacterial gastroenteritis' as a high-confidence primary condition.
+    const hasBacterialEtiology = entities.some((e) => e.name === 'bacterial')
+        || /(?:^|\s)(?:ال)?(?:بكتيري|بكتيرية|بكتيريا)(?:\s|$)|bacterial/i.test(normalized);
+    const hasGastroOrDiarrhea = conditions.some((c) => c.concept === 'gastroenteritis' || c.concept === 'diarrhea')
+        || symptoms.includes('diarrhea')
+        || /gastroenteritis|diarrh|إسهال|اسهال|نزلة معوية/i.test(normalized);
+
+    if (hasBacterialEtiology && hasGastroOrDiarrhea) {
+        if (!conditions.some((c) => c.concept === 'bacterial gastroenteritis')) {
+            conditions.unshift({ concept: 'bacterial gastroenteritis', confidence: 0.95 });
+        }
+        pushTerm('bacterial gastroenteritis');
+        pushTerm('bacterial');
+        pushTerm('antibiotic');
+    }
+
     // 4. Patient context: this turn + inherited session state from history.
     // Inheritance is not limited to short follow-up turns: a comparison or any
     // later turn in the same clinical conversation (spec §8/§11) inherits the
@@ -634,7 +684,7 @@ function interpretClinicalQuery(message, history = []) {
         'دلوقتي', 'دولوقتي', 'طب', 'طيب', 'كان', 'عنده', 'عندي', 'بسبب', 'ايه', 'إيه',
         'اللي', 'من', 'في', 'على', 'لو', 'دا', 'ده', 'دي', 'ممحكن', 'ممكن', 'احسن', 'أحسن',
         'افضل', 'أفضل', 'ولا', 'أو', 'او', 'هل', 'الـ', 'زي', 'زيادة', 'حالة', 'وهل',
-        'وبديله', 'مفيش', 'مش', 'ليها', 'ليه', 'طفل', 'طفلة', 'اطفال', 'أطفال', 'سنة',
+        'وبديله', 'مفيش', 'مش', 'ليها', 'ليه', 'سنة',
         'سنين', 'سنوات', 'سنتين', 'وزن', 'وزنه', 'وزنها', 'كيلو', 'بتاع', 'بتاعة', 'بتاعت',
         'بتاعته', 'بتاعتها', 'عيان', 'عيانة', 'العيان', 'العيانة', 'مريض', 'مريضة', 'المريض',
         'المريضة', 'ازاي', 'إزاي', 'علشان', 'عشان', 'ينفع', 'اديله', 'اديه', 'اديها', 'اعطيه',
@@ -652,6 +702,7 @@ function interpretClinicalQuery(message, history = []) {
         && (!language.mixed || !/^[\u0600-\u06ff]+$/u.test(token))
     );
     for (const { token } of rawTokens) { const canonical = ENGLISH_SYNONYMS[token] || token; pushTerm(canonical); }
+    if (attrs.pediatric) pushTerm('pediatric');
     // Inherited conditions/terms from session state keep follow-up retrieval grounded.
     if (sessionState.active && isFollowUp) {
         if (sessionState.obesity) pushTerm('obesity');
@@ -692,7 +743,8 @@ function interpretClinicalQuery(message, history = []) {
         retrieval_anchors: [conditionName, ...medications, ...drugClasses, ...symptoms].filter(Boolean),
         patient: {
             sex,
-            age: { value: ageValue, unit: ageValue != null ? 'years' : null, range: ageRange },
+            age: { value: ageValue, unit: ageValue != null ? 'years' : null, range: ageRange, age_group: attrs.pediatric ? 'pediatric' : null },
+            pediatric: Boolean(attrs.pediatric),
             obesity,
             weight_kg: weightKg,
             height_cm: heightCm,
@@ -705,7 +757,7 @@ function interpretClinicalQuery(message, history = []) {
             blood_pressure: bp,
             labs,
         },
-        population: { age: ageValue, age_range: ageRange, weight: weightKg, sex, pregnancy }, // legacy fields consumed by planner/sufficiency
+        population: { age: ageValue, age_range: ageRange, age_group: attrs.pediatric ? 'pediatric' : null, pediatric: Boolean(attrs.pediatric), weight: weightKg, sex, pregnancy }, // legacy fields consumed by planner/sufficiency
         medications,
         drug_classes: drugClasses,
         symptoms,

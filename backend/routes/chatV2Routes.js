@@ -33,11 +33,11 @@ function composerPolicy(query, sessionState) {
             return 'This is a follow-up: continue the existing conversation naturally. Do not restart with generic headings; resolve references against the established clinical context.';
         case 'research_question':
         case 'latest_evidence':
-            return 'This is an evidence-synthesis request: organize as a brief synthesis with a short evidence-landscape summary, then key findings, then stated uncertainty.';
+            return 'This is an evidence-synthesis request: organize as a brief synthesis with a short evidence-landscape summary, then key findings, then stated uncertainty. If the user query or interpreted query specifies an etiology (e.g. bacterial infection) or therapeutic class (e.g. antibiotics), address the specific indications, recommended agents, contraindications, and clinical practice guideline updates directly.';
         case 'diagnosis_question':
             return 'This is a diagnostic/workup question: reason-oriented workup (criteria, then tests, then differentials supported by evidence).';
         default:
-            return 'This is a clinical management question: lead with the primary recommendation supported by evidence, then important qualifiers, alternatives only if evidence states them, and conflicts if present.';
+            return 'This is a clinical management question: lead with the primary recommendation supported by evidence, then important qualifiers, alternatives only if evidence states them, and conflicts if present. If the user query specifies a specific etiology (e.g. bacterial) or treatment class (e.g. antibiotics), focus directly on the recommended regimens and clinical indications for that condition.';
     }
 }
 

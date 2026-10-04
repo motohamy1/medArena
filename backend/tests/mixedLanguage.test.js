@@ -76,3 +76,37 @@ test('mixed query: pediatric age + weight + condition + drug passes safety gate 
     assert.ok(doseModifierTask.queries.some((q) => q.includes('pediatric')));
 });
 
+test('mixed query: bacterial diarrhea in children with gastroenteritis resolves condition and antibiotic tasks', async () => {
+    const { decomposeClinicalTask } = require('../services/clinicalTaskDecomposer');
+
+    const text = 'ماهي اخر وأحدث علاج للاسهال البكتيري ف الاطفال وحدوث نزلة معوية gastroenteritis';
+    const query = interpretClinicalQuery(text);
+    const normalized = await normalizeClinicalQueryForRetrieval(query, text);
+
+    assert.equal(normalized.status, 'OK');
+    assert.equal(normalized.query.condition, 'bacterial gastroenteritis');
+    assert.equal(normalized.query.population.pediatric, true);
+    assert.ok(normalized.query.retrieval_anchors.includes('bacterial gastroenteritis'));
+    assert.ok(normalized.query.search_terms.includes('bacterial'));
+    assert.ok(normalized.query.search_terms.includes('antibiotic'));
+    assert.ok(normalized.query.search_terms.includes('pediatric'));
+
+    const tasks = decomposeClinicalTask(normalized.query);
+    const guidelineTask = tasks.find((t) => t.task_id === 'current_guideline' || t.task_id === 'first_line_classes');
+    assert.ok(guidelineTask);
+    assert.ok(guidelineTask.queries.some((q) => q.includes('antibiotic')));
+    assert.ok(guidelineTask.queries.some((q) => q.includes('pediatric')));
+});
+
+test('pure Arabic query: bacterial diarrhea in children resolves to bacterial gastroenteritis', async () => {
+    const text = 'ماهي اخر وأحدث علاج للاسهال البكتيري ف الاطفال';
+    const query = interpretClinicalQuery(text);
+    const normalized = await normalizeClinicalQueryForRetrieval(query, text);
+
+    assert.equal(normalized.status, 'OK');
+    assert.equal(normalized.query.condition, 'bacterial gastroenteritis');
+    assert.equal(normalized.query.population.pediatric, true);
+    assert.ok(normalized.query.retrieval_anchors.includes('bacterial gastroenteritis'));
+});
+
+

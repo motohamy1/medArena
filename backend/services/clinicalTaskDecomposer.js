@@ -50,6 +50,7 @@ const SOCIETY_HINTS = Object.freeze([
     { match: /asthma/, societies: ['GINA'] },
     { match: /copd/, societies: ['GOLD'] },
     { match: /pneumonia|sepsis|infection|antibiotic/, societies: ['IDSA', 'infectious disease guideline'] },
+    { match: /gastroenteritis|diarrh|enteritis/, societies: ['IDSA infectious diarrhea guideline', 'ESPGHAN gastroenteritis guideline', 'AAP diarrhea guideline'] },
     { match: /pregnan/, societies: ['obstetric guideline', 'pregnancy safety data'] },
 ]);
 
@@ -109,6 +110,19 @@ function buildTaskQueries(task, query) {
         ? query.condition
         : diseaseConditions[0]?.concept || query.condition || baseTerms[0] || '';
     const entities = [...(query.drug_classes || []), ...(query.medications || [])];
+    const isBacterial = (query.search_terms || []).includes('bacterial')
+        || (query.conditions || []).some((c) => c.concept.includes('bacterial'))
+        || (query.entities || []).some((e) => e.name === 'bacterial');
+    const hasAntibiotic = (query.search_terms || []).includes('antibiotic')
+        || (query.drug_classes || []).includes('antibiotic')
+        || (query.entities || []).some((e) => e.name === 'antibiotic');
+    const isPediatric = Boolean(
+        query.population?.pediatric
+        || query.patient?.pediatric
+        || (query.search_terms || []).includes('pediatric')
+        || query.patient?.age?.range
+        || query.patient?.age?.value != null,
+    );
     const variants = [];
     const push = (q) => { const v = q.trim(); if (v.length > 3 && !variants.includes(v)) variants.push(v); };
 
@@ -116,12 +130,19 @@ function buildTaskQueries(task, query) {
         case 'first_line_classes':
         case 'management_recommendation':
         case 'current_guideline':
+            if (isBacterial || hasAntibiotic) {
+                push(`${condition} antibiotic guideline`);
+                if (isPediatric) push(`${condition} antibiotic pediatric guideline`);
+                push(`${condition} antimicrobial therapy recommendations`);
+            }
+            if (isPediatric && !(isBacterial || hasAntibiotic)) {
+                push(`${condition} guideline pediatric`);
+            }
             push(`${condition} first-line treatment guideline`);
             push(`${condition} management recommendation guideline`);
             for (const society of societyHintsFor(query.conditions)) {
-                // skip society hints that just repeat the condition ("hypertension hypertension")
-                const hintBody = society.replace(new RegExp(`^${condition}\\b\\s*`), '');
-                if (hintBody && hintBody !== society) push(`${condition} ${hintBody}`);
+                const cleanSociety = society.replace(new RegExp(`^${condition}\\b\\s*`, 'i'), '').trim();
+                if (cleanSociety) push(`${condition} ${cleanSociety}`);
             }
             break;
         case 'patient_modifiers':
@@ -129,6 +150,7 @@ function buildTaskQueries(task, query) {
             if (query.patient.obesity) push(`obesity ${condition || 'hypertension'} treatment consideration`);
             if (query.patient.pregnancy) push(`pregnancy ${condition || condition === '' ? (query.condition || 'treatment') : 'treatment'} safety`);
             if (query.patient.renal_status === 'present') push(`renal impairment ${query.condition || 'drug'} dosing`);
+            if (isPediatric) push(`${condition || 'treatment'} pediatric guidelines children`);
             break;
         case 'comparison_efficacy':
             for (const entity of entities) push(`${entity} ${condition || ''} outcomes`.trim());
@@ -170,8 +192,15 @@ function buildTaskQueries(task, query) {
             break;
         case 'evidence_landscape':
         case 'recent_updates':
-            push(`${condition || baseTerms.join(' ')} recent study`);
-            push(`${condition || baseTerms.join(' ')} trial outcomes`);
+            if (isBacterial || hasAntibiotic) {
+                push(`${condition} antibiotic recent study`);
+                if (isPediatric) push(`${condition} antibiotic pediatric recent study`);
+                push(`${condition} antimicrobial trial outcomes`);
+            } else {
+                push(`${condition || baseTerms.join(' ')} recent study`);
+                push(`${condition || baseTerms.join(' ')} trial outcomes`);
+                if (isPediatric) push(`${condition} pediatric recent study`);
+            }
             break;
         case 'context_target':
             push([condition, ...(query.search_terms || [])].filter(Boolean).slice(0, 5).join(' '));
